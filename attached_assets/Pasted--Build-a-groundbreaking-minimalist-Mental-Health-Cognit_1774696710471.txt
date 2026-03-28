@@ -1,0 +1,57 @@
+"Build a groundbreaking, minimalist Mental Health & Cognitive Performance App called 'Asha' (आशा).
+
+Core Objective: To solve student/professional burnout using 'Invisible UI' and 'Digital Phenotyping.' The app should feel like a 'Digital Worry Stone' that manages executive function when the user is too depleted to do so themselves.
+
+1. The Interaction Layer (The Digital Worry Stone):
+
+Home Screen: A centered, glowing 3D-effect fluid orb (The Stone) using Framer Motion.
+
+Mechanism: The user 'feeds' the orb by holding their thumb on it for 10s.
+
+Passive Sensing: While holding, track 'Interaction Latency' (milliseconds between micro-movements/shivers) and 'Pressure Duration' as hidden metrics for cognitive load and fatigue.
+
+Live Ambient Sync: Connect to OpenWeather API. If sunlight is < 4 hours or barometric pressure drops (Lake Effect Snow conditions), the Orb shifts to a 'Solar Warmth' color temperature (Amber/Gold) to provide simulated light therapy.
+
+2. The Invisible Check-In:
+
+After the hold, show 3 simple, non-text icons for 2 seconds each:
+
+Attendance (Check/Cross)
+
+Nourishment (Food Icon toggle)
+
+Internal Alignment (A 1-5 slider: 'How much are you masking today?')
+
+Pattern Engine: Save these to Supabase/Postgres. Detect '3 AM signals' (late-night usage) automatically.
+
+3. The Cognitive Dashboard & 'Campus Pulse':
+
+The Resilience Path: A generative garden. For every check-in, a petal is added to a cumulative 'Resilience Bloom.' No streaks, no guilt—just a growing record of effort.
+
+The Pulse: An anonymized 'Campus Heatmap' showing the aggregate stress of the community (e.g., '60% of students are in a Dark Stretch today'). Use this to validate the user's feelings.
+
+4. The Claude 3.5 'Witness' Layer:
+
+Integrate Claude to analyze: 1) Interaction Latency, 2) Weather Data, and 3) Academic Calendar stage.
+
+The Note: Display a 'Note from Asha' that is warm and specific (e.g., 'The stone feels heavy. It’s been gray for 3 days and it’s Week 7. You are exactly on schedule to feel this way. It’s not you, it’s the load.')
+
+5. Predictive 'Adulting' (The Relief):
+
+If 'Cognitive Paralysis' is detected, show one 'Lighten the Load' button.
+
+Action Seeds: When clicked, it offers one-tap solutions:
+
+The Professor Bridge: Claude drafts a professional, policy-aware extension request email.
+
+The Sanctuary Nudge: Suggest a 'Low-Friction Sanctuary' using live location (e.g., 'The quiet lounge in the Student Center is empty and sun-lit. Go for 10 mins.')
+
+6. Styling & UI:
+
+Aesthetic: 'Quiet Luxury' / 'Cyber-Organic.'
+
+Colors: Dark mode, forest greens, oatmeal beige, and bioluminescent violet.
+
+Typography: A variable font that gets thinner/lighter if 'Brain Speed' (latency) is low.
+
+Navigation: Gestures only. No nav bars. Swipe up for insights, long press to clear brain."

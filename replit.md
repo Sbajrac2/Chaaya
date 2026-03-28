@@ -1,8 +1,8 @@
-# Workspace
+# Aasha (आशा) — Workspace
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Aasha is a minimalist mental health & cognitive support app for students and professionals. Built around a "Digital Worry Stone" interaction paradigm — a single glowing orb the user holds to check in. No menus, no nav bars, gesture-only navigation.
 
 ## Stack
 
@@ -10,87 +10,77 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
+- **Frontend**: React + Vite (Framer Motion, Tailwind CSS)
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
+- **AI**: OpenAI via Replit AI Integrations (gpt-5-mini)
 - **Build**: esbuild (CJS bundle)
+
+## Artifacts
+
+### `artifacts/aasha` — Frontend (React + Vite)
+- Serves at `/` (root)
+- Key components:
+  - `src/components/Orb.tsx` — The glowing worry stone orb with breath animation
+  - `src/components/CheckinFlow.tsx` — 3-step icon-based check-in (class/food/masking)
+  - `src/components/SwipeableView.tsx` — Swipe-up gesture container
+  - `src/components/panels/GardenPanel.tsx` — Resilience garden (petals)
+  - `src/components/panels/NotePanel.tsx` — Asha's AI note + Lighten the Load
+  - `src/components/panels/PulsePanel.tsx` — Anonymous campus stress heatmap
+  - `src/hooks/use-session.ts` — localStorage session UUID management
+  - `src/hooks/use-weather-sync.ts` — Geolocation + weather sync
+
+### `artifacts/api-server` — Express API
+- Serves at `/api`
+- Routes:
+  - `GET /api/healthz` — health check
+  - `POST /api/checkins` — submit check-in
+  - `GET /api/checkins?sessionId=X` — get check-ins
+  - `GET /api/checkins/garden?sessionId=X` — resilience garden data
+  - `POST /api/insights` — AI-generated "Note from Asha"
+  - `POST /api/insights/email` — AI-drafted professor extension email
+  - `GET /api/weather?lat=X&lon=Y` — weather data (requires OPENWEATHER_API_KEY, graceful fallback)
+  - `GET /api/pulse` — anonymized community stress pulse
+
+## Database Schema
+
+### `checkins` table
+- `id`, `session_id`, `attended_class`, `ate_well`, `masking_level` (1-5)
+- `hold_duration_ms`, `interaction_latency_ms` (cognitive load indicators)
+- `is_late_night` (auto-detected from time of submission)
+- `lat`, `lon`, `created_at`
+
+## Environment Variables
+
+- `DATABASE_URL` — PostgreSQL connection (auto-provisioned by Replit)
+- `AI_INTEGRATIONS_OPENAI_BASE_URL` — OpenAI proxy (auto-set by Replit AI Integrations)
+- `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI key (auto-set by Replit AI Integrations)
+- `OPENWEATHER_API_KEY` — Optional. Weather data. App works without it (graceful fallback).
+- `SESSION_SECRET` — Session signing secret
+
+## Key Design Decisions
+
+- **Zero stigma UI**: No clinical forms, no diagnoses. Just a stone, icons, and warmth.
+- **Cognitive load tracking**: Hold duration + micro-movement latency = passive stress signal
+- **No streaks**: Resilience garden only grows (petals never die). No shame mechanics.
+- **Community validation**: Campus Pulse shows anonymized aggregate data to normalize struggle.
+- **Solar Warmth mode**: Orb shifts amber/gold when sunlight hours < 4 (simulated light therapy)
+- **Gesture-only navigation**: Swipe up to reveal insights. Long press to reset.
 
 ## Structure
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
+├── artifacts/
+│   ├── aasha/              # React+Vite frontend
 │   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
+├── lib/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+│   ├── api-zod/            # Generated Zod schemas
+│   ├── db/                 # Drizzle ORM schema + DB connection
+│   └── integrations-openai-ai-server/  # OpenAI server-side client
+└── scripts/                # Utility scripts
 ```
-
-## TypeScript & Composite Projects
-
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
-
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
-
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

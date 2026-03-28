@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Aasha"
+version = "1.0.0"
+id = "artifacts/aasha"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18353
+
+[services.development]
+run = "pnpm --filter @workspace/aasha run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aasha", "run", "build" ]
+publicDir = "artifacts/aasha/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18353"
+BASE_PATH = "/"

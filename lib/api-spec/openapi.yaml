@@ -1,22 +1,28 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Aasha Mental Health App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: checkins
+    description: Daily check-in operations
+  - name: insights
+    description: AI-generated insights
+  - name: weather
+    description: Weather data
+  - name: pulse
+    description: Community pulse data
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +30,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /checkins:
+    post:
+      operationId: createCheckin
+      tags: [checkins]
+      summary: Submit a daily check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckinRequest"
+      responses:
+        "201":
+          description: Check-in created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Checkin"
+    get:
+      operationId: getCheckins
+      tags: [checkins]
+      summary: Get recent check-ins
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: List of check-ins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Checkin"
+
+  /checkins/garden:
+    get:
+      operationId: getGarden
+      tags: [checkins]
+      summary: Get garden/resilience data
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Garden data with petals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GardenData"
+
+  /insights:
+    post:
+      operationId: generateInsight
+      tags: [insights]
+      summary: Generate an AI insight based on check-ins and weather
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightRequest"
+      responses:
+        "200":
+          description: AI-generated insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightResponse"
+
+  /insights/email:
+    post:
+      operationId: generateExtensionEmail
+      tags: [insights]
+      summary: Generate a professor extension request email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtensionEmailRequest"
+      responses:
+        "200":
+          description: Generated email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionEmailResponse"
+
+  /weather:
+    get:
+      operationId: getWeather
+      tags: [weather]
+      summary: Get weather data for a location
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Weather data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherData"
+
+  /pulse:
+    get:
+      operationId: getCommunityPulse
+      tags: [pulse]
+      summary: Get anonymized community stress pulse
+      responses:
+        "200":
+          description: Community pulse data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPulse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +178,203 @@ components:
       required:
         - status
 
+    CreateCheckinRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        attendedClass:
+          type: boolean
+        ateWell:
+          type: boolean
+        maskingLevel:
+          type: integer
+          minimum: 1
+          maximum: 5
+        holdDurationMs:
+          type: integer
+          description: How long user held the stone in milliseconds
+        interactionLatencyMs:
+          type: number
+          description: Average milliseconds between micro-movements (cognitive load indicator)
+        lat:
+          type: number
+          nullable: true
+        lon:
+          type: number
+          nullable: true
+      required:
+        - sessionId
+        - attendedClass
+        - ateWell
+        - maskingLevel
+        - holdDurationMs
+        - interactionLatencyMs
+
+    Checkin:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        attendedClass:
+          type: boolean
+        ateWell:
+          type: boolean
+        maskingLevel:
+          type: integer
+        holdDurationMs:
+          type: integer
+        interactionLatencyMs:
+          type: number
+        isLateNight:
+          type: boolean
+        lat:
+          type: number
+          nullable: true
+        lon:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sessionId
+        - attendedClass
+        - ateWell
+        - maskingLevel
+        - holdDurationMs
+        - interactionLatencyMs
+        - isLateNight
+        - createdAt
+
+    GardenData:
+      type: object
+      properties:
+        totalPetals:
+          type: integer
+        recentCheckins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Checkin"
+        currentStreak:
+          type: integer
+      required:
+        - totalPetals
+        - recentCheckins
+        - currentStreak
+
+    InsightRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        weatherData:
+          $ref: "#/components/schemas/WeatherData"
+        recentCheckins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Checkin"
+        academicWeek:
+          type: integer
+          nullable: true
+      required:
+        - sessionId
+        - recentCheckins
+
+    InsightResponse:
+      type: object
+      properties:
+        note:
+          type: string
+        cognitiveLoad:
+          type: string
+          enum: [low, moderate, high]
+        showLightenLoad:
+          type: boolean
+        sanctuarySuggestion:
+          type: string
+          nullable: true
+      required:
+        - note
+        - cognitiveLoad
+        - showLightenLoad
+
+    ExtensionEmailRequest:
+      type: object
+      properties:
+        professorName:
+          type: string
+          nullable: true
+        courseName:
+          type: string
+          nullable: true
+        assignmentName:
+          type: string
+          nullable: true
+        studentName:
+          type: string
+          nullable: true
+      required: []
+
+    ExtensionEmailResponse:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+        mailtoLink:
+          type: string
+      required:
+        - subject
+        - body
+        - mailtoLink
+
+    WeatherData:
+      type: object
+      properties:
+        temperature:
+          type: number
+        description:
+          type: string
+        uvIndex:
+          type: number
+        sunlightHours:
+          type: number
+        barometricPressure:
+          type: number
+        isLowSunlight:
+          type: boolean
+        city:
+          type: string
+      required:
+        - temperature
+        - description
+        - uvIndex
+        - sunlightHours
+        - barometricPressure
+        - isLowSunlight
+        - city
+
+    CommunityPulse:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        inDarkStretch:
+          type: integer
+        percentageDarkStretch:
+          type: number
+        averageMaskingLevel:
+          type: number
+        message:
+          type: string
+      required:
+        - totalUsers
+        - inDarkStretch
+        - percentageDarkStretch
+        - averageMaskingLevel
+        - message

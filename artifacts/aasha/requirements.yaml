@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For the complex fluid orb animations, gesture handling (swipe up/down/left/right), and layout transitions"
+  "uuid": "To generate and manage the anonymous user sessionId"
+  "@types/uuid": "Types for uuid package"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility for merging tailwind classes without style conflicts"
+  "@workspace/api-client-react": "API client for backend communication"
+
+images:
+  - path: "artifacts/aasha/public/images/bioluminescent-texture.png"
+    description: "Deep dark forest background with very subtle bioluminescent cyan and violet glowing particles, quiet luxury, abstract, dark mode, high resolution"
+    aspect_ratio: "16:9"
+
+notes:
+  - All API hooks are imported from @workspace/api-client-react
+  - Force dark mode at the body level
+  - Session ID is maintained in localStorage
+  - Geolocation requires browser permission; handles graceful degradation if denied

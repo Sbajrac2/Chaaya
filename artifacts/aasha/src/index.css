@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --font-sans: 'DM Sans', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-solar: hsl(var(--solar));
+  --color-solar-foreground: hsl(var(--solar-foreground));
+  --color-border: hsl(var(--border));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+}
+
+:root {
+  /* Dark mode forced - deep forest/bioluminescent theme */
+  --background: 160 25% 6%; /* Deep, dark green-tinted black */
+  --foreground: 40 20% 95%; /* Soft oatmeal/cream */
+  
+  --primary: 262 83% 65%; /* Bioluminescent Violet */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 160 20% 12%;
+  --secondary-foreground: 40 20% 90%;
+  
+  --muted: 160 15% 15%;
+  --muted-foreground: 160 10% 60%;
+  
+  --accent: 185 96% 60%; /* Cyan/Teal glow */
+  --accent-foreground: 0 0% 10%;
+  
+  --solar: 38 92% 55%; /* Warm Amber/Gold */
+  --solar-foreground: 0 0% 10%;
+  
+  --border: 160 20% 15%;
+  --card: 160 22% 8%;
+  --card-foreground: 40 20% 95%;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans overflow-hidden touch-none select-none;
+    background-image: radial-gradient(circle at 50% 0%, hsla(var(--primary) / 0.05) 0%, transparent 70%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-medium tracking-wide;
+  }
+}
+
+/* Custom Orb Animation Utilities */
+@keyframes fluid-rotate {
+  0% { transform: rotate(0deg) scale(1) translateZ(0); }
+  50% { transform: rotate(180deg) scale(1.05) translateZ(0); }
+  100% { transform: rotate(360deg) scale(1) translateZ(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.2); }
+}
+
+.animate-breathe {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+.orb-gradient-violet {
+  background: radial-gradient(circle at 30% 30%, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--background)));
+  background-size: 200% 200%;
+}
+
+.orb-gradient-solar {
+  background: radial-gradient(circle at 30% 30%, hsl(var(--solar)), hsl(20, 90%, 60%), hsl(var(--background)));
+  background-size: 200% 200%;
+}
+
+/* Base custom classes to enforce dark mode globally since we dropped the generic tailwind utility */
+html {
+  color-scheme: dark;
+}
