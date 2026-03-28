@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGenerateInsight, useGenerateExtensionEmail, useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, MapPin, Loader2, ArrowLeft, Brain, Eye, Moon, Activity } from "lucide-react";
+import { Sparkles, Mail, MapPin, Loader2, ArrowLeft, Brain, Eye, Moon, Activity, RefreshCw, Clock, BookOpen, Heart, Shield } from "lucide-react";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
 interface NotePanelProps {
@@ -10,7 +10,73 @@ interface NotePanelProps {
   userName?: string;
 }
 
-type View = "note" | "email-form" | "email-result" | "sanctuary";
+type View = "note" | "email-picker" | "email-form" | "email-result" | "sanctuary";
+
+type EmailType = "extension" | "absence" | "office-hours" | "accommodation" | "mental-health-day";
+
+interface EmailOption {
+  type: EmailType;
+  label: string;
+  sublabel: string;
+  icon: React.ReactNode;
+  fields: { key: string; placeholder: string }[];
+}
+
+const EMAIL_OPTIONS: EmailOption[] = [
+  {
+    type: "extension",
+    label: "Extension request",
+    sublabel: "Ask for more time on an assignment",
+    icon: <Clock size={18} className="text-violet-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
+      { key: "assignmentName", placeholder: "Assignment name (optional)" },
+    ],
+  },
+  {
+    type: "absence",
+    label: "Absence notification",
+    sublabel: "Let your professor know you'll miss class",
+    icon: <BookOpen size={18} className="text-teal-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
+    ],
+  },
+  {
+    type: "office-hours",
+    label: "Office hours request",
+    sublabel: "Schedule time to talk with your professor",
+    icon: <Mail size={18} className="text-blue-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
+      { key: "extraContext", placeholder: "What do you want to discuss? (optional)" },
+    ],
+  },
+  {
+    type: "accommodation",
+    label: "Accommodation request",
+    sublabel: "Request support or flexibility",
+    icon: <Shield size={18} className="text-amber-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
+      { key: "extraContext", placeholder: "What kind of support? (optional)" },
+    ],
+  },
+  {
+    type: "mental-health-day",
+    label: "Mental health day",
+    sublabel: "A brief, honest note — no over-explaining",
+    icon: <Heart size={18} className="text-rose-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
+    ],
+  },
+];
 
 const READING_SIGNALS = [
   { icon: Moon, label: "Sleep patterns" },
@@ -21,9 +87,8 @@ const READING_SIGNALS = [
 
 export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
   const [view, setView] = useState<View>("note");
-  const [profName, setProfName] = useState("");
-  const [courseName, setCourseName] = useState("");
-  const [assignName, setAssignName] = useState("");
+  const [selectedEmail, setSelectedEmail] = useState<EmailOption>(EMAIL_OPTIONS[0]);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [hasTriggered, setHasTriggered] = useState(false);
 
   const { data: checkins } = useGetCheckins(
@@ -60,10 +125,12 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
     try {
       const res = await email.mutateAsync({
         data: {
-          professorName: profName,
-          courseName,
-          assignmentName: assignName,
+          emailType: selectedEmail.type,
+          professorName: formValues.professorName || undefined,
+          courseName: formValues.courseName || undefined,
+          assignmentName: formValues.assignmentName || undefined,
           studentName: userName || undefined,
+          extraContext: formValues.extraContext || undefined,
         },
       });
       if (res.mailtoLink) {
@@ -71,6 +138,18 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
       }
       setView("email-result");
     } catch {}
+  };
+
+  const handleRegenerate = async () => {
+    email.reset();
+    setView("email-form");
+    setTimeout(() => handleEmailGenerate(), 100);
+  };
+
+  const handlePickEmail = (option: EmailOption) => {
+    setSelectedEmail(option);
+    setFormValues({});
+    setView("email-form");
   };
 
   return (
@@ -160,10 +239,10 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
                   </p>
                   <ActionCard
                     icon={<Mail size={18} />}
-                    label="Draft extension email"
-                    sublabel="Asha writes it for you"
+                    label="Draft an email"
+                    sublabel="Choose from 5 types — Asha writes it"
                     color="violet"
-                    onClick={() => setView("email-form")}
+                    onClick={() => setView("email-picker")}
                   />
                   <ActionCard
                     icon={<MapPin size={18} />}
@@ -178,6 +257,42 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
           </motion.div>
         )}
 
+        {view === "email-picker" && (
+          <motion.div
+            key="email-picker"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex flex-col gap-4 pt-2"
+          >
+            <button onClick={() => setView("note")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-1">
+              <ArrowLeft size={16} /> <span className="text-xs font-display tracking-widest uppercase">Back</span>
+            </button>
+
+            <p className="text-sm text-white/60 leading-relaxed">
+              What kind of email do you need? Pick one and Asha will write it for you.
+            </p>
+
+            <div className="space-y-2">
+              {EMAIL_OPTIONS.map((option) => (
+                <motion.button
+                  key={option.type}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => handlePickEmail(option)}
+                  className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/4 border border-white/8 hover:bg-white/6 hover:border-white/15 transition-all active:scale-97 text-left"
+                >
+                  <div className="flex-shrink-0">{option.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-white/70 block">{option.label}</span>
+                    <span className="text-[10px] text-white/30">{option.sublabel}</span>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {view === "email-form" && (
           <motion.div
             key="email-form"
@@ -186,26 +301,26 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
             exit={{ opacity: 0, x: -30 }}
             className="flex flex-col gap-5 pt-2"
           >
-            <button onClick={() => setView("note")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-2">
+            <button onClick={() => setView("email-picker")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-2">
               <ArrowLeft size={16} /> <span className="text-xs font-display tracking-widest uppercase">Back</span>
             </button>
 
-            <p className="text-sm text-white/60 leading-relaxed">
-              Need more time on an assignment? Asha will draft a warm, professional email to your professor.
-            </p>
+            <div className="flex items-center gap-3 mb-1">
+              {selectedEmail.icon}
+              <div>
+                <p className="text-sm text-white/70 font-medium">{selectedEmail.label}</p>
+                <p className="text-[10px] text-white/30">{selectedEmail.sublabel}</p>
+              </div>
+            </div>
 
             <div className="space-y-3">
-              {[
-                { placeholder: "Professor name (optional)", val: profName, set: setProfName },
-                { placeholder: "Course name (optional)", val: courseName, set: setCourseName },
-                { placeholder: "Assignment name (optional)", val: assignName, set: setAssignName },
-              ].map(({ placeholder, val, set }) => (
+              {selectedEmail.fields.map(({ key, placeholder }) => (
                 <input
-                  key={placeholder}
+                  key={key}
                   type="text"
                   placeholder={placeholder}
-                  value={val}
-                  onChange={(e) => set(e.target.value)}
+                  value={formValues[key] || ""}
+                  onChange={(e) => setFormValues({ ...formValues, [key]: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white/80 placeholder-white/25 focus:outline-none focus:border-violet-500/50 transition-colors"
                 />
               ))}
@@ -230,7 +345,7 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
             key="email-result"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center gap-6 pt-10 text-center"
+            className="flex flex-col items-center gap-6 pt-8 text-center"
           >
             <div className="w-16 h-16 rounded-full bg-violet-500/20 flex items-center justify-center">
               <Mail size={28} className="text-violet-400" />
@@ -249,8 +364,24 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
                 <p className="text-xs text-white/50 whitespace-pre-wrap leading-relaxed">{email.data.body}</p>
               </div>
             )}
-            <button onClick={() => setView("note")} className="text-xs text-white/30 underline mt-2">
-              Back
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={handleRegenerate}
+                disabled={email.isPending}
+                className="flex items-center gap-2 text-xs text-violet-400/70 hover:text-violet-400 transition-colors"
+              >
+                <RefreshCw size={14} className={email.isPending ? "animate-spin" : ""} />
+                Give me another
+              </button>
+              <button
+                onClick={() => setView("email-picker")}
+                className="text-xs text-white/30 hover:text-white/50 transition-colors"
+              >
+                Different type
+              </button>
+            </div>
+            <button onClick={() => setView("note")} className="text-xs text-white/20 underline mt-1">
+              Done
             </button>
           </motion.div>
         )}

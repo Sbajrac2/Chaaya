@@ -5,10 +5,13 @@
  * Aasha Mental Health App API
  * OpenAPI spec version: 0.1.0
  */
+import type { ExtensionEmailRequestEmailType } from "./extensionEmailRequestEmailType";
 
 export interface ExtensionEmailRequest {
+  emailType?: ExtensionEmailRequestEmailType;
   professorName?: string | null;
   courseName?: string | null;
   assignmentName?: string | null;
   studentName?: string | null;
+  extraContext?: string | null;
 }

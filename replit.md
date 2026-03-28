@@ -27,9 +27,9 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
   - `src/components/Onboarding.tsx` — First-launch onboarding (name input + tint color picker)
   - `src/components/CheckinFlow.tsx` — 4-step check-in (showed up, nourished, left room, masking slider) + bio-validation card
   - `src/components/InsightsView.tsx` — 5-tab insight panel (Chhaya/Garden/Asha/Pulse/Focus) with swipe + tap navigation
-  - `src/components/panels/ChhayaPanel.tsx` — Chhaya behavioral dashboard (pattern detection, signal cards, attendance heatmap, calendar)
+  - `src/components/panels/ChhayaPanel.tsx` — Chhaya behavioral dashboard (SVG line charts for masking + wellbeing trends, bar chart for daily wellbeing, pattern detection signals, heatmap, calendar)
   - `src/components/panels/GardenPanel.tsx` — Visual flower garden (SVG flowers per day, tap to see stats)
-  - `src/components/panels/NotePanel.tsx` — Asha's AI note with patterns + Lighten the Load (email with date + user name, sanctuary)
+  - `src/components/panels/NotePanel.tsx` — Asha's AI note with patterns + Lighten the Load (5 email types: extension/absence/office-hours/accommodation/mental-health-day + regenerate)
   - `src/components/panels/PulsePanel.tsx` — Campus Pulse with explanation, interactive dots, share light
   - `src/components/panels/FocusFunnelPanel.tsx` — One-Task Mode with focus timer + quick-focus shortcuts + focus technique tips
   - `src/hooks/use-session.ts` — localStorage session UUID management

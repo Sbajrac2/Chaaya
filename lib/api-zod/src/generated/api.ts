@@ -195,11 +195,23 @@ export const GenerateInsightResponse = zod.object({
 /**
  * @summary Generate a professor extension request email
  */
+export const generateExtensionEmailBodyEmailTypeDefault = `extension`;
+
 export const GenerateExtensionEmailBody = zod.object({
+  emailType: zod
+    .enum([
+      "extension",
+      "absence",
+      "office-hours",
+      "accommodation",
+      "mental-health-day",
+    ])
+    .default(generateExtensionEmailBodyEmailTypeDefault),
   professorName: zod.string().nullish(),
   courseName: zod.string().nullish(),
   assignmentName: zod.string().nullish(),
   studentName: zod.string().nullish(),
+  extraContext: zod.string().nullish(),
 });
 
 export const GenerateExtensionEmailResponse = zod.object({

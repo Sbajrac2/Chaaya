@@ -220,32 +220,42 @@ router.post("/insights/bio-validation", async (req, res) => {
 router.post("/insights/email", async (req, res) => {
   try {
     const body = GenerateExtensionEmailBody.parse(req.body);
-    const { professorName, courseName, assignmentName, studentName } = body;
-
-    const systemPrompt = `You are a professional writing assistant. Draft a warm, honest, and professional email requesting a 24-48 hour extension on an assignment. 
-The tone should be respectful, brief, and human — not groveling. Reference that the student is managing their wellbeing.
-Keep it to 3-4 short paragraphs.`;
+    const { professorName, courseName, assignmentName, studentName, emailType, extraContext } = body;
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
-    const userPrompt = `Write an extension request email with these details:
-- Date: ${today}
-- Professor: ${professorName ?? "Professor"}
-- Course: ${courseName ?? "my course"}
-- Assignment: ${assignmentName ?? "the upcoming assignment"}
-- Student: ${studentName ?? "a student"}
-- Include today's date (${today}) in the email
+    const emailPrompts: Record<string, { system: string; user: string }> = {
+      extension: {
+        system: `You are a professional writing assistant. Draft a warm, honest, and professional email requesting a 24-48 hour extension on an assignment. The tone should be respectful, brief, and human — not groveling. Reference that the student is managing their wellbeing. Keep it to 3-4 short paragraphs.`,
+        user: `Write an extension request email:\n- Date: ${today}\n- Professor: ${professorName ?? "Professor"}\n- Course: ${courseName ?? "my course"}\n- Assignment: ${assignmentName ?? "the upcoming assignment"}\n- Student: ${studentName ?? "a student"}\n- Include today's date in the email${extraContext ? `\n- Additional context: ${extraContext}` : ""}`,
+      },
+      absence: {
+        system: `You are a professional writing assistant. Draft a warm, honest email notifying a professor about a class absence. The tone should be respectful and brief. Do not over-explain or give medical details — just acknowledge the absence and ask about making up missed work. Keep it to 2-3 short paragraphs.`,
+        user: `Write an absence notification email:\n- Date: ${today}\n- Professor: ${professorName ?? "Professor"}\n- Course: ${courseName ?? "my course"}\n- Student: ${studentName ?? "a student"}\n- The student needs to miss class and wants to follow up on missed material${extraContext ? `\n- Additional context: ${extraContext}` : ""}`,
+      },
+      "office-hours": {
+        system: `You are a professional writing assistant. Draft a polite email requesting an office hours meeting with a professor. The tone should be warm and specific about what the student needs help with. Keep it to 2-3 short paragraphs.`,
+        user: `Write an office hours request email:\n- Date: ${today}\n- Professor: ${professorName ?? "Professor"}\n- Course: ${courseName ?? "my course"}\n- Student: ${studentName ?? "a student"}\n- The student wants to schedule a meeting to discuss course material or get support${extraContext ? `\n- Specific topic: ${extraContext}` : ""}`,
+      },
+      accommodation: {
+        system: `You are a professional writing assistant. Draft a respectful email requesting academic accommodation or support. The tone should be clear and professional without oversharing personal details. Reference that the student is working with support services if applicable. Keep it to 3-4 short paragraphs.`,
+        user: `Write an accommodation request email:\n- Date: ${today}\n- Professor: ${professorName ?? "Professor"}\n- Course: ${courseName ?? "my course"}\n- Student: ${studentName ?? "a student"}\n- The student is requesting reasonable accommodation for their wellbeing${extraContext ? `\n- Additional context: ${extraContext}` : ""}`,
+      },
+      "mental-health-day": {
+        system: `You are a professional writing assistant. Draft a brief, honest email letting a professor know the student needs a mental health day. The tone should be matter-of-fact and respectful — no excessive apology. Keep it to 2 short paragraphs.`,
+        user: `Write a mental health day notification:\n- Date: ${today}\n- Professor: ${professorName ?? "Professor"}\n- Course: ${courseName ?? "my course"}\n- Student: ${studentName ?? "a student"}\n- The student is taking a necessary mental health day and wants to follow up on anything missed${extraContext ? `\n- Additional context: ${extraContext}` : ""}`,
+      },
+    };
 
-Return ONLY a JSON object with these exact fields:
-{
-  "subject": "email subject line",
-  "body": "full email body text"
-}`;
+    const type = emailType ?? "extension";
+    const prompts = emailPrompts[type] ?? emailPrompts.extension;
+
+    const userPrompt = `${prompts.user}\n\nReturn ONLY a JSON object with these exact fields:\n{\n  "subject": "email subject line",\n  "body": "full email body text"\n}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: prompts.system },
         { role: "user", content: userPrompt },
       ],
       max_completion_tokens: 400,
@@ -253,8 +263,16 @@ Return ONLY a JSON object with these exact fields:
 
     const content = completion.choices[0]?.message?.content ?? "{}";
 
-    let subject = `Extension Request — ${assignmentName ?? "Assignment"}`;
-    let emailBody = `Dear ${professorName ?? "Professor"},\n\nI am writing to respectfully request a brief extension on ${assignmentName ?? "the assignment"} for ${courseName ?? "your course"}.\n\nI have been managing some personal challenges this week and want to ensure I submit work that reflects my genuine effort.\n\nWould a 24-hour extension be possible? I am committed to completing this and appreciate your understanding.\n\nThank you,\n${studentName ?? "Student"}`;
+    const subjectDefaults: Record<string, string> = {
+      extension: `Extension Request — ${assignmentName ?? "Assignment"}`,
+      absence: `Absence Notification — ${courseName ?? "Class"}`,
+      "office-hours": `Office Hours Request — ${courseName ?? "Course"}`,
+      accommodation: `Accommodation Request — ${courseName ?? "Course"}`,
+      "mental-health-day": `Wellness Day — ${courseName ?? "Class"}`,
+    };
+
+    let subject = subjectDefaults[type] ?? subjectDefaults.extension;
+    let emailBody = `Dear ${professorName ?? "Professor"},\n\nI am writing regarding ${courseName ?? "your course"}.\n\nI have been managing some personal challenges and want to ensure I can continue performing my best.\n\nThank you for your understanding.\n\n${studentName ?? "Student"}`;
 
     try {
       const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

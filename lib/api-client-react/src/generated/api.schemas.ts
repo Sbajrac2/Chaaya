@@ -104,11 +104,24 @@ export interface InsightResponse {
   patterns?: string[];
 }
 
+export type ExtensionEmailRequestEmailType =
+  (typeof ExtensionEmailRequestEmailType)[keyof typeof ExtensionEmailRequestEmailType];
+
+export const ExtensionEmailRequestEmailType = {
+  extension: "extension",
+  absence: "absence",
+  "office-hours": "office-hours",
+  accommodation: "accommodation",
+  "mental-health-day": "mental-health-day",
+} as const;
+
 export interface ExtensionEmailRequest {
+  emailType?: ExtensionEmailRequestEmailType;
   professorName?: string | null;
   courseName?: string | null;
   assignmentName?: string | null;
   studentName?: string | null;
+  extraContext?: string | null;
 }
 
 export interface ExtensionEmailResponse {

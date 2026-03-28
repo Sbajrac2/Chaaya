@@ -13,6 +13,7 @@ export * from "./checkin";
 export * from "./communityPulse";
 export * from "./createCheckinRequest";
 export * from "./extensionEmailRequest";
+export * from "./extensionEmailRequestEmailType";
 export * from "./extensionEmailResponse";
 export * from "./focusFunnelRequest";
 export * from "./focusFunnelResponse";

@@ -401,6 +401,15 @@ components:
     ExtensionEmailRequest:
       type: object
       properties:
+        emailType:
+          type: string
+          enum:
+            - extension
+            - absence
+            - office-hours
+            - accommodation
+            - mental-health-day
+          default: extension
         professorName:
           type: string
           nullable: true
@@ -411,6 +420,9 @@ components:
           type: string
           nullable: true
         studentName:
+          type: string
+          nullable: true
+        extraContext:
           type: string
           nullable: true
       required: []
