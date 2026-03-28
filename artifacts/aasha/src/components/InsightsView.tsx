@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Flower2, Sparkles, Radio, Target, Eye } from "lucide-react";
+import { ChevronDown, Flower2, Sparkles, Radio, Target, Eye, BarChart3 } from "lucide-react";
 import { GardenPanel } from "./panels/GardenPanel";
 import { NotePanel } from "./panels/NotePanel";
 import { PulsePanel } from "./panels/PulsePanel";
 import { FocusFunnelPanel } from "./panels/FocusFunnelPanel";
 import { ChhayaPanel } from "./panels/ChhayaPanel";
+import { DashboardPanel } from "./panels/DashboardPanel";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
 interface InsightsViewProps {
@@ -18,6 +19,7 @@ interface InsightsViewProps {
 
 const TABS = [
   { id: "chhaya", icon: Eye, label: "Chhaya" },
+  { id: "dashboard", icon: BarChart3, label: "Dashboard" },
   { id: "garden", icon: Flower2, label: "Garden" },
   { id: "note", icon: Sparkles, label: "Asha" },
   { id: "pulse", icon: Radio, label: "Pulse" },
@@ -99,6 +101,11 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
           {activeTab === "chhaya" && (
             <Panel key="chhaya">
               <ChhayaPanel sessionId={sessionId} userName={userName} />
+            </Panel>
+          )}
+          {activeTab === "dashboard" && (
+            <Panel key="dashboard">
+              <DashboardPanel sessionId={sessionId} userName={userName} />
             </Panel>
           )}
           {activeTab === "garden" && (
