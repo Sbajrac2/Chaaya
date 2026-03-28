@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, AlertTriangle, TrendingDown, Moon, Users, Utensils, Activity } from "lucide-react";
+import { Loader2, AlertTriangle, TrendingDown, Moon, Users, Utensils, Activity, FlaskConical } from "lucide-react";
 import { Footer } from "@/components/Footer";
 
 interface ChhayaPanelProps {
@@ -27,6 +27,7 @@ interface DayData {
   leftRoom: boolean;
   ateWell: boolean;
   count: number;
+  sleepScore: number;
 }
 
 function getAcademicWeek(): { week: number; label: string } {
@@ -48,17 +49,47 @@ function getAcademicWeek(): { week: number; label: string } {
   return { week, label };
 }
 
+function generateDemoCheckins(): any[] {
+  const now = new Date();
+  const checkins: any[] = [];
+  for (let i = 20; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dayOfWeek = d.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const stress = i < 7 ? 0.6 : i < 14 ? 0.4 : 0.2;
+
+    checkins.push({
+      id: `demo-${i}`,
+      sessionId: "demo",
+      attendedClass: isWeekend ? true : Math.random() > stress * 0.6,
+      ateWell: Math.random() > stress * 0.5,
+      maskingLevel: Math.min(5, Math.max(1, Math.round(1 + stress * 4 + (Math.random() - 0.5) * 2))),
+      holdDurationMs: 10000 + Math.random() * 2000,
+      interactionLatencyMs: 200 + Math.random() * 300,
+      isLateNight: Math.random() < stress * 0.7,
+      leftRoom: Math.random() > stress * 0.4,
+      hadSunlightExposure: Math.random() > 0.3,
+      completedTask: Math.random() > stress * 0.4,
+      createdAt: d.toISOString(),
+    });
+  }
+  return checkins;
+}
+
 function aggregateByDay(checkins: any[]): DayData[] {
-  const map = new Map<string, { attended: number; masking: number[]; wellbeing: number[]; lateNight: boolean; leftRoom: boolean; ateWell: boolean; count: number }>();
+  const map = new Map<string, { attended: number; masking: number[]; wellbeing: number[]; lateNight: boolean; leftRoom: boolean; ateWell: boolean; count: number; sleepScores: number[] }>();
 
   checkins.forEach(c => {
     const d = new Date(c.createdAt);
     const key = d.toISOString().split("T")[0];
-    const existing = map.get(key) || { attended: 0, masking: [], wellbeing: [], lateNight: false, leftRoom: true, ateWell: true, count: 0 };
+    const existing = map.get(key) || { attended: 0, masking: [], wellbeing: [], lateNight: false, leftRoom: true, ateWell: true, count: 0, sleepScores: [] };
     existing.attended += c.attendedClass ? 1 : 0;
     existing.masking.push(c.maskingLevel ?? 0);
     const wb = (c.attendedClass ? 1 : 0) + (c.ateWell ? 1 : 0) + ((c as any).leftRoom !== false ? 1 : 0) + (c.maskingLevel < 3 ? 1 : 0) + (!c.isLateNight ? 1 : 0);
     existing.wellbeing.push(wb);
+    const sleep = c.isLateNight ? 4 + Math.random() * 2 : 6.5 + Math.random() * 2;
+    existing.sleepScores.push(sleep);
     if (c.isLateNight) existing.lateNight = true;
     if ((c as any).leftRoom === false) existing.leftRoom = false;
     if (!c.ateWell) existing.ateWell = false;
@@ -79,16 +110,194 @@ function aggregateByDay(checkins: any[]): DayData[] {
       leftRoom: v.leftRoom,
       ateWell: v.ateWell,
       count: v.count,
+      sleepScore: v.sleepScores.length > 0 ? v.sleepScores.reduce((a, b) => a + b, 0) / v.sleepScores.length : 7,
     });
   });
 
   days.sort((a, b) => a.date.localeCompare(b.date));
-  return days.slice(-14);
+  return days.slice(-21);
+}
+
+function aggregateByWeek(dayData: DayData[]): { label: string; attendance: number; masking: number; lateNights: number; wellbeing: number; days: number }[] {
+  const weeks: Map<string, { attendance: number[]; masking: number[]; lateNights: number; wellbeing: number[]; days: number; start: string }> = new Map();
+
+  dayData.forEach(d => {
+    const date = new Date(d.date + "T12:00:00");
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    const key = weekStart.toISOString().split("T")[0];
+    const existing = weeks.get(key) || { attendance: [], masking: [], lateNights: 0, wellbeing: [], days: 0, start: key };
+    existing.attendance.push(d.attended);
+    existing.masking.push(d.masking);
+    if (d.lateNight) existing.lateNights++;
+    existing.wellbeing.push(d.wellbeing);
+    existing.days++;
+    weeks.set(key, existing);
+  });
+
+  return Array.from(weeks.values()).map(w => {
+    const wStart = new Date(w.start + "T12:00:00");
+    return {
+      label: `${wStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      attendance: w.attendance.length > 0 ? Math.round((w.attendance.reduce((a, b) => a + b, 0) / w.attendance.length) * 100) : 0,
+      masking: w.masking.length > 0 ? +(w.masking.reduce((a, b) => a + b, 0) / w.masking.length).toFixed(1) : 0,
+      lateNights: w.lateNights,
+      wellbeing: w.wellbeing.length > 0 ? +(w.wellbeing.reduce((a, b) => a + b, 0) / w.wellbeing.length).toFixed(1) : 0,
+      days: w.days,
+    };
+  });
+}
+
+function DualLineChart({ data }: { data: DayData[] }) {
+  if (data.length < 2) return null;
+  const w = 300;
+  const h = 100;
+  const px = 30;
+  const py = 14;
+  const chartW = w - px * 2;
+  const chartH = h - py * 2;
+
+  const sleepPoints = data.map((d, i) => ({
+    x: px + (i / (data.length - 1)) * chartW,
+    y: py + chartH - (Math.min(d.sleepScore, 10) / 10) * chartH,
+    label: d.label,
+    value: d.sleepScore,
+  }));
+
+  const maskPoints = data.map((d, i) => ({
+    x: px + (i / (data.length - 1)) * chartW,
+    y: py + chartH - (d.masking / 5) * chartH,
+    label: d.label,
+    value: d.masking,
+  }));
+
+  const makePath = (pts: typeof sleepPoints) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+
+  const makeArea = (pts: typeof sleepPoints) => {
+    const pathD = makePath(pts);
+    return `${pathD} L ${pts[pts.length - 1].x.toFixed(1)} ${h} L ${pts[0].x.toFixed(1)} ${h} Z`;
+  };
+
+  return (
+    <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/25">Sleep & masking — daily</p>
+        <div className="flex gap-3">
+          <span className="flex items-center gap-1 text-[8px] text-indigo-400/60"><span className="w-3 h-0.5 rounded bg-indigo-400/60 inline-block" /> Sleep</span>
+          <span className="flex items-center gap-1 text-[8px] text-violet-400/60"><span className="w-3 h-0.5 rounded bg-violet-400/60 inline-block" /> Masking</span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 100 }}>
+        <defs>
+          <linearGradient id="grad-sleep" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id="grad-mask-dual" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[2, 4, 6, 8].map(v => (
+          <line key={v} x1={px} y1={py + chartH - (v / 10) * chartH} x2={w - px} y2={py + chartH - (v / 10) * chartH} stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
+        ))}
+        <text x={px - 4} y={py + 4} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">10h</text>
+        <text x={px - 4} y={py + chartH / 2 + 2} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">5h</text>
+        <text x={px - 4} y={py + chartH + 4} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">0</text>
+
+        <path d={makeArea(sleepPoints)} fill="url(#grad-sleep)" />
+        <path d={makePath(sleepPoints)} fill="none" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+
+        <path d={makeArea(maskPoints)} fill="url(#grad-mask-dual)" />
+        <path d={makePath(maskPoints)} fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" strokeDasharray="4 3" />
+
+        {sleepPoints.map((p, i) => (
+          <circle key={`s${i}`} cx={p.x} cy={p.y} r="2.5" fill="#818cf8" opacity="0.8">
+            <title>{`${p.label}: ${p.value.toFixed(1)}h sleep`}</title>
+          </circle>
+        ))}
+        {maskPoints.map((p, i) => (
+          <circle key={`m${i}`} cx={p.x} cy={p.y} r="2.5" fill="#a78bfa" opacity="0.8">
+            <title>{`${p.label}: ${p.value.toFixed(1)}/5 masking`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="flex justify-between text-[8px] text-white/20 px-1">
+        <span>{data[0].label}</span>
+        <span>{data[data.length - 1].label}</span>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyGroupedBarChart({ weeks }: { weeks: ReturnType<typeof aggregateByWeek> }) {
+  if (weeks.length < 1) return null;
+  const w = 300;
+  const h = 130;
+  const px = 8;
+  const py = 12;
+  const chartH = h - py - 28;
+  const groupW = (w - px * 2) / weeks.length;
+  const barW = Math.min(14, groupW / 4 - 2);
+
+  const metrics = [
+    { key: "attendance" as const, color: "rgba(52,211,153,0.6)", label: "Attend %", max: 100 },
+    { key: "masking" as const, color: "rgba(167,139,250,0.6)", label: "Masking", max: 5 },
+    { key: "lateNights" as const, color: "rgba(129,140,248,0.5)", label: "Late", max: 7 },
+  ];
+
+  return (
+    <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/25">Weekly averages</p>
+        <div className="flex gap-2">
+          {metrics.map(m => (
+            <span key={m.key} className="flex items-center gap-1 text-[7px] text-white/30">
+              <span className="w-2 h-2 rounded-sm inline-block" style={{ background: m.color }} />
+              {m.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 130 }}>
+        {weeks.map((week, wi) => {
+          const groupX = px + wi * groupW;
+          return (
+            <g key={wi}>
+              {metrics.map((m, mi) => {
+                const val = week[m.key];
+                const normalized = Math.min(val / m.max, 1);
+                const barH = Math.max(2, normalized * chartH);
+                const x = groupX + (groupW - barW * 3 - 4) / 2 + mi * (barW + 2);
+                const y = py + chartH - barH;
+                return (
+                  <g key={m.key}>
+                    <rect x={x} y={y} width={barW} height={barH} rx={2} fill={m.color}>
+                      <title>{`${week.label} — ${m.label}: ${val}${m.key === "attendance" ? "%" : m.key === "masking" ? "/5" : ""}`}</title>
+                    </rect>
+                    {wi === 0 && (
+                      <text x={x + barW / 2} y={py + chartH + 20} textAnchor="middle" fontSize="5" fill="rgba(255,255,255,0.12)">
+                        {m.label}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+              <text x={groupX + groupW / 2} y={py + chartH + 12} textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.2)">
+                {week.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
 }
 
 function MiniLineChart({ data, color, maxY, label, unit }: { data: { x: number; y: number; label: string }[]; color: string; maxY: number; label: string; unit?: string }) {
   if (data.length < 2) return null;
-  const w = 280;
+  const w = 300;
   const h = 80;
   const px = 8;
   const py = 10;
@@ -133,45 +342,6 @@ function MiniLineChart({ data, color, maxY, label, unit }: { data: { x: number; 
   );
 }
 
-function WeeklyBarChart({ data }: { data: DayData[] }) {
-  if (data.length < 3) return null;
-
-  const w = 280;
-  const h = 90;
-  const px = 8;
-  const barW = Math.min(24, (w - px * 2) / data.length - 4);
-  const chartH = h - 30;
-
-  return (
-    <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2">
-      <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/25">Daily wellbeing</p>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 90 }}>
-        {data.map((d, i) => {
-          const x = px + i * ((w - px * 2) / data.length) + ((w - px * 2) / data.length - barW) / 2;
-          const normalized = d.wellbeing / 5;
-          const barH = Math.max(2, normalized * chartH);
-          const y = 8 + chartH - barH;
-
-          const barColor = normalized > 0.7 ? "rgba(52,211,153,0.5)" : normalized > 0.4 ? "rgba(251,191,36,0.4)" : "rgba(239,68,68,0.35)";
-
-          return (
-            <g key={i}>
-              <rect x={x} y={y} width={barW} height={barH} rx={3} fill={barColor}>
-                <title>{`${d.label}: ${d.wellbeing.toFixed(1)}/5`}</title>
-              </rect>
-              {i % Math.max(1, Math.floor(data.length / 5)) === 0 && (
-                <text x={x + barW / 2} y={h - 4} textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.2)">
-                  {d.label.split(" ")[1]}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
 export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
   const { data: checkins, isLoading } = useGetCheckins(
     { sessionId, limit: 100 },
@@ -179,15 +349,45 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
   );
   const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [useDemo, setUseDemo] = useState(false);
 
-  const all = useMemo(() => checkins ?? [], [checkins]);
+  const demoCheckins = useMemo(() => generateDemoCheckins(), []);
+  const realCheckins = useMemo(() => checkins ?? [], [checkins]);
+  const all = useDemo ? demoCheckins : realCheckins;
   const dayData = useMemo(() => aggregateByDay(all), [all]);
+  const weekData = useMemo(() => aggregateByWeek(dayData), [dayData]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30">
         <Loader2 className="w-6 h-6 animate-spin" />
         <p className="text-[10px] font-display tracking-[0.3em] uppercase">Analyzing patterns...</p>
+      </div>
+    );
+  }
+
+  if (realCheckins.length === 0 && !useDemo) {
+    return (
+      <div className="flex flex-col h-full px-5 pt-3 pb-16 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+            <Activity size={28} className="text-white/20" />
+          </div>
+          <div className="space-y-2 max-w-[260px]">
+            <p className="text-base text-white/60 font-light">No check-ins yet</p>
+            <p className="text-xs text-white/30 leading-relaxed">
+              Hold the orb for 10 seconds to do your first check-in. Chhaya will start tracking your patterns.
+            </p>
+          </div>
+          <button
+            onClick={() => setUseDemo(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-300/70 hover:bg-violet-500/20 transition-all text-xs font-display tracking-widest uppercase"
+          >
+            <FlaskConical size={14} />
+            Preview with demo data
+          </button>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -283,23 +483,48 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
     });
   }
 
-  const maskingChartData = dayData.map((d, i) => ({ x: i, y: d.masking, label: d.label }));
   const wellbeingChartData = dayData.map((d, i) => ({ x: i, y: d.wellbeing, label: d.label }));
 
   const calendarDays = buildCalendar(all);
 
   return (
     <div className="flex flex-col h-full px-5 pt-3 pb-16 overflow-y-auto space-y-5">
-      <div className="space-y-1">
-        <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20">
-          Chhaya · Your patterns
-        </p>
-        <p className="text-xs text-white/35">
-          {totalDays} day{totalDays !== 1 ? "s" : ""} tracked · Week {academicWeek} of semester
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20">
+            Chhaya · Your patterns
+          </p>
+          <p className="text-xs text-white/35">
+            {totalDays} day{totalDays !== 1 ? "s" : ""} tracked · Week {academicWeek} of semester
+          </p>
+        </div>
+        <button
+          onClick={() => setUseDemo(!useDemo)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-[9px] font-display tracking-widest uppercase ${
+            useDemo
+              ? "bg-violet-500/15 border-violet-500/25 text-violet-300/70"
+              : "bg-white/4 border-white/8 text-white/30 hover:text-white/50"
+          }`}
+          title={useDemo ? "Showing demo data — click to see your data" : "Click to preview with demo data"}
+        >
+          <FlaskConical size={12} />
+          {useDemo ? "Demo" : "My data"}
+        </button>
       </div>
 
-      {academicWeek >= 7 && (
+      {useDemo && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-4 py-2.5 rounded-xl bg-violet-500/8 border border-violet-500/15"
+        >
+          <p className="text-[10px] text-violet-300/50 leading-relaxed">
+            Previewing with 21 sample check-ins so you can see what Chhaya looks like with data. Your real data will appear once you start checking in.
+          </p>
+        </motion.div>
+      )}
+
+      {academicWeek >= 7 && !useDemo && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -317,16 +542,10 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
         <StatCard label="Late nights" value={`${lateNightCount}`} />
       </div>
 
-      {dayData.length >= 3 && (
+      {dayData.length >= 2 && (
         <div className="space-y-3">
-          <MiniLineChart
-            data={maskingChartData}
-            color="#a78bfa"
-            maxY={5}
-            label="Masking level — last 14 days"
-            unit="/5"
-          />
-          <WeeklyBarChart data={dayData} />
+          <DualLineChart data={dayData} />
+          <WeeklyGroupedBarChart weeks={weekData} />
           <MiniLineChart
             data={wellbeingChartData}
             color="#34d399"
