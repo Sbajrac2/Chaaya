@@ -145,4 +145,58 @@ Return ONLY a JSON object with these exact fields:
   }
 });
 
+router.post("/insights/focus", async (req, res) => {
+  try {
+    const { tasks, weatherDescription, uvIndex, sunlightHours } = req.body as {
+      tasks: string[];
+      weatherDescription?: string;
+      uvIndex?: number;
+      sunlightHours?: number;
+      sessionId?: string;
+    };
+
+    if (!tasks || tasks.length === 0) {
+      return res.status(400).json({ error: "No tasks provided" });
+    }
+
+    const weatherContext = weatherDescription
+      ? `Current weather: ${weatherDescription}. UV index: ${uvIndex ?? "unknown"}. Sunlight hours today: ${sunlightHours ?? "unknown"}.`
+      : "No weather data.";
+
+    const prompt = `You are Asha, a cognitive support companion. A student has ${tasks.length} task(s) they need to complete:
+${tasks.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+
+Environmental context: ${weatherContext}
+
+Your job: Pick exactly ONE task that best matches their current cognitive capacity and environmental conditions. 
+- Low sunlight or high UV fatigue → prefer simpler, familiar tasks
+- Reasonable conditions → pick the most urgent
+- Choose what will actually get done, not the "right" answer
+
+Return ONLY a JSON object:
+{
+  "task": "the exact task string chosen",
+  "reason": "one warm, specific sentence explaining why this task fits right now (mention weather or energy if relevant)"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_completion_tokens: 150,
+    });
+
+    const content = completion.choices[0]?.message?.content ?? "{}";
+    try {
+      const clean = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(clean);
+      res.json({ task: parsed.task ?? tasks[0], reason: parsed.reason ?? "Start here — it's the right size for right now." });
+    } catch {
+      res.json({ task: tasks[0], reason: "Start with the first one — one step at a time." });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Focus funnel error");
+    res.json({ task: req.body.tasks?.[0] ?? "First task", reason: "Start with the first one. Small steps." });
+  }
+});
+
 export default router;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGenerateInsight, useGenerateExtensionEmail, useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Heart, Loader2 } from "lucide-react";
+import { Sparkles, Mail, MapPin, Loader2, ArrowLeft } from "lucide-react";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
 interface NotePanelProps {
@@ -9,147 +9,267 @@ interface NotePanelProps {
   weather: WeatherData | undefined;
 }
 
-export function NotePanel({ sessionId, weather }: NotePanelProps) {
-  const [hasGenerated, setHasGenerated] = useState(false);
-  const [showExtensionForm, setShowExtensionForm] = useState(false);
-  const [showSanctuary, setShowSanctuary] = useState(false);
+type View = "note" | "email-form" | "email-result" | "sanctuary";
 
-  // Form State
+export function NotePanel({ sessionId, weather }: NotePanelProps) {
+  const [view, setView] = useState<View>("note");
   const [profName, setProfName] = useState("");
   const [courseName, setCourseName] = useState("");
   const [assignName, setAssignName] = useState("");
+  const [hasTriggered, setHasTriggered] = useState(false);
 
-  const { data: checkins } = useGetCheckins({ sessionId, limit: 10 }, { query: { enabled: !!sessionId }});
-  
-  const generateInsight = useGenerateInsight();
-  const generateEmail = useGenerateExtensionEmail();
+  const { data: checkins } = useGetCheckins(
+    { sessionId, limit: 14 },
+    { query: { enabled: !!sessionId, refetchOnMount: true } }
+  );
+
+  const insight = useGenerateInsight();
+  const email = useGenerateExtensionEmail();
 
   useEffect(() => {
-    if (checkins && !hasGenerated && !generateInsight.isPending && !generateInsight.data) {
-      setHasGenerated(true);
-      generateInsight.mutate({
+    if (checkins !== undefined && !hasTriggered && !insight.data && !insight.isPending) {
+      setHasTriggered(true);
+      insight.mutate({
         data: {
           sessionId,
           recentCheckins: checkins,
           weatherData: weather,
-        }
+          academicWeek: getAcademicWeek(),
+        },
       });
     }
-  }, [checkins, hasGenerated, sessionId, weather, generateInsight]);
+  }, [checkins, hasTriggered, sessionId, weather, insight]);
 
   const handleEmailGenerate = async () => {
     try {
-      const res = await generateEmail.mutateAsync({
-        data: {
-          professorName: profName,
-          courseName,
-          assignmentName: assignName
-        }
+      const res = await email.mutateAsync({
+        data: { professorName: profName, courseName, assignmentName: assignName },
       });
       if (res.mailtoLink) {
         window.open(res.mailtoLink, "_blank");
       }
-      setShowExtensionForm(false);
-    } catch (e) {
-      console.error(e);
-    }
+      setView("email-result");
+    } catch {}
   };
 
   return (
-    <div className="flex flex-col h-full w-full px-8 pt-12 pb-24 overflow-y-auto custom-scrollbar">
-      {generateInsight.isPending || !generateInsight.data ? (
-        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-6">
-          <Sparkles className="w-8 h-8 animate-pulse text-accent" />
-          <p className="font-display tracking-widest text-sm uppercase text-center leading-loose">
-            Asha is reflecting<br/>on your patterns...
-          </p>
-        </div>
-      ) : (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="flex flex-col flex-1"
-        >
-          <div className="mb-10 text-accent/70">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          
-          <p className="text-xl md:text-2xl text-foreground font-sans font-light leading-relaxed mb-12 text-pretty">
-            "{generateInsight.data.note}"
-          </p>
-
-          <AnimatePresence mode="wait">
-            {!showExtensionForm && !showSanctuary && generateInsight.data.showLightenLoad && (
-              <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
-                className="mt-auto space-y-4"
-              >
-                <p className="text-xs font-display tracking-widest text-muted-foreground uppercase mb-4">Lighten the Load</p>
-                <button 
-                  onClick={() => setShowExtensionForm(true)}
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-4 hover:bg-white/10 transition-colors"
+    <div className="flex flex-col h-full px-7 pt-4 pb-16 overflow-y-auto">
+      <AnimatePresence mode="wait">
+        {/* Main note view */}
+        {view === "note" && (
+          <motion.div
+            key="note"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col flex-1"
+          >
+            {insight.isPending || (!insight.data && !insight.error) ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-6 text-white/30">
+                <motion.div
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="p-2 rounded-full bg-primary/20 text-primary"><Mail size={18} /></div>
-                  <span className="font-display text-sm tracking-wide">Draft an extension email</span>
-                </button>
-                <button 
-                  onClick={() => setShowSanctuary(true)}
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-4 hover:bg-white/10 transition-colors"
-                >
-                  <div className="p-2 rounded-full bg-accent/20 text-accent"><Heart size={18} /></div>
-                  <span className="font-display text-sm tracking-wide">Find Sanctuary</span>
-                </button>
-              </motion.div>
-            )}
-
-            {showExtensionForm && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                className="mt-auto space-y-4 bg-black/40 p-6 rounded-3xl border border-white/5"
-              >
-                <h3 className="font-display text-sm tracking-widest text-white uppercase mb-4">Extension Request</h3>
-                <input 
-                  type="text" placeholder="Professor Name" value={profName} onChange={e => setProfName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
-                />
-                <input 
-                  type="text" placeholder="Course Name" value={courseName} onChange={e => setCourseName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
-                />
-                <input 
-                  type="text" placeholder="Assignment" value={assignName} onChange={e => setAssignName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
-                />
-                <div className="flex gap-3 mt-4">
-                  <button onClick={() => setShowExtensionForm(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-sm font-display hover:bg-white/5 transition-colors">Cancel</button>
-                  <button 
-                    onClick={handleEmailGenerate} disabled={generateEmail.isPending}
-                    className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-display hover:bg-primary/90 transition-colors flex justify-center items-center"
-                  >
-                    {generateEmail.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate"}
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {showSanctuary && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                className="mt-auto bg-accent/10 border border-accent/20 p-6 rounded-3xl"
-              >
-                <div className="mb-4 text-accent"><Heart size={24} /></div>
-                <p className="text-sm leading-relaxed text-foreground mb-6">
-                  {generateInsight.data.sanctuarySuggestion || "Take 15 minutes right now. Close your laptop. Find a quiet spot, ideally near a window or outside. Do nothing. Just breathe."}
+                  <Sparkles size={28} className="text-violet-400/60" />
+                </motion.div>
+                <p className="text-[10px] font-display tracking-[0.3em] uppercase text-center leading-loose">
+                  Asha is reading<br />the patterns...
                 </p>
-                <button onClick={() => setShowSanctuary(false)} className="text-xs font-display tracking-widest text-muted-foreground uppercase hover:text-white transition-colors">
-                  Return
-                </button>
-              </motion.div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-8 pt-2">
+                <Sparkles size={20} className="text-violet-400/50" />
+
+                <p className="text-xl font-sans font-light text-white/90 leading-relaxed">
+                  "{insight.data?.note ?? "The stone feels heavy. You showed up anyway."}"
+                </p>
+
+                {insight.data?.showLightenLoad && (
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[9px] font-display tracking-[0.35em] uppercase text-white/25 mb-3">
+                      Lighten the Load
+                    </p>
+                    <ActionCard
+                      icon={<Mail size={18} />}
+                      label="Draft extension email"
+                      color="violet"
+                      onClick={() => setView("email-form")}
+                    />
+                    <ActionCard
+                      icon={<MapPin size={18} />}
+                      label="Find sanctuary"
+                      color="teal"
+                      onClick={() => setView("sanctuary")}
+                    />
+                  </div>
+                )}
+
+                {insight.error && (
+                  <button
+                    onClick={() => { setHasTriggered(false); }}
+                    className="text-xs text-white/30 underline"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
             )}
-          </AnimatePresence>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+
+        {/* Email form */}
+        {view === "email-form" && (
+          <motion.div
+            key="email-form"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex flex-col gap-5 pt-2"
+          >
+            <button onClick={() => setView("note")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-2">
+              <ArrowLeft size={16} /> <span className="text-xs font-display tracking-widest uppercase">Back</span>
+            </button>
+
+            <div className="space-y-3">
+              {[
+                { placeholder: "Professor name (optional)", val: profName, set: setProfName },
+                { placeholder: "Course name (optional)", val: courseName, set: setCourseName },
+                { placeholder: "Assignment name (optional)", val: assignName, set: setAssignName },
+              ].map(({ placeholder, val, set }) => (
+                <input
+                  key={placeholder}
+                  type="text"
+                  placeholder={placeholder}
+                  value={val}
+                  onChange={(e) => set(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white/80 placeholder-white/25 focus:outline-none focus:border-violet-500/50 transition-colors"
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={handleEmailGenerate}
+              disabled={email.isPending}
+              className="w-full py-4 rounded-2xl bg-violet-600/80 border border-violet-500/30 text-white font-display text-sm tracking-widest uppercase hover:bg-violet-600 active:scale-95 transition-all flex justify-center items-center gap-2"
+            >
+              {email.isPending ? <Loader2 size={16} className="animate-spin" /> : "Generate & Open Mail"}
+            </button>
+
+            <p className="text-[10px] text-white/20 text-center leading-relaxed">
+              Asha will write a warm, professional email and open your mail app.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Email result */}
+        {view === "email-result" && (
+          <motion.div
+            key="email-result"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center gap-6 pt-10 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-violet-500/20 flex items-center justify-center">
+              <Mail size={28} className="text-violet-400" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-base text-white/80 font-light">Email opened in your mail app.</p>
+              <p className="text-xs text-white/30 max-w-[220px] leading-relaxed">
+                Your professor deserves to know you're trying. That took courage.
+              </p>
+            </div>
+            {email.data && (
+              <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-left space-y-3">
+                <p className="text-[10px] font-display tracking-widest uppercase text-white/30">Subject</p>
+                <p className="text-sm text-white/70">{email.data.subject}</p>
+                <p className="text-[10px] font-display tracking-widest uppercase text-white/30 mt-3">Body</p>
+                <p className="text-xs text-white/50 whitespace-pre-wrap leading-relaxed">{email.data.body}</p>
+              </div>
+            )}
+            <button onClick={() => setView("note")} className="text-xs text-white/30 underline mt-2">
+              Back
+            </button>
+          </motion.div>
+        )}
+
+        {/* Sanctuary */}
+        {view === "sanctuary" && (
+          <motion.div
+            key="sanctuary"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex flex-col gap-6 pt-2"
+          >
+            <button onClick={() => setView("note")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-2">
+              <ArrowLeft size={16} /> <span className="text-xs font-display tracking-widest uppercase">Back</span>
+            </button>
+
+            <div className="flex items-start gap-4 p-5 rounded-2xl bg-teal-900/20 border border-teal-500/20">
+              <MapPin size={20} className="text-teal-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-white/70 leading-relaxed">
+                {insight.data?.sanctuarySuggestion ??
+                  "Find somewhere quiet and low-stimulation — near a window if you can. 10 minutes of stillness is recovery. You don't have to do anything."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {[
+                { label: "Library quiet floor", note: "Low light, high quiet" },
+                { label: "Outside bench", note: "Natural light reset" },
+                { label: "Empty classroom", note: "Alone with your thoughts" },
+                { label: "Café corner", note: "Low-pressure ambient noise" },
+              ].map(({ label, note }) => (
+                <div key={label} className="p-4 rounded-2xl bg-white/4 border border-white/8">
+                  <p className="text-xs text-white/70 font-medium">{label}</p>
+                  <p className="text-[10px] text-white/30 mt-1">{note}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function ActionCard({
+  icon,
+  label,
+  color,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  color: "violet" | "teal";
+  onClick: () => void;
+}) {
+  const colorMap = {
+    violet: "bg-violet-500/10 border-violet-500/20 text-violet-400",
+    teal: "bg-teal-500/10 border-teal-500/20 text-teal-400",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all hover:brightness-125 active:scale-97 ${colorMap[color]}`}
+    >
+      <div className="flex-shrink-0">{icon}</div>
+      <span className="text-sm font-display tracking-wide text-white/70">{label}</span>
+    </button>
+  );
+}
+
+function getAcademicWeek(): number {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  // Rough semester mapping (Spring: Jan 13 = week 1, Fall: Aug 26 = week 1)
+  if (month >= 1 && month <= 5) {
+    const start = new Date(now.getFullYear(), 0, 13);
+    return Math.ceil((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  } else if (month >= 8 && month <= 12) {
+    const start = new Date(now.getFullYear(), 7, 26);
+    return Math.ceil((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  }
+  return 7;
 }

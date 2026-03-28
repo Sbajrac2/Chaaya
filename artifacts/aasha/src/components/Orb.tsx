@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, useAnimation, useMotionValue } from "framer-motion";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface OrbProps {
@@ -10,134 +10,175 @@ interface OrbProps {
 export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0);
-  
-  // Tracking logic
+  const [breathPhase, setBreathPhase] = useState(0);
+
   const holdStartTime = useRef<number>(0);
   const lastMoveTime = useRef<number>(0);
   const movementLatencies = useRef<number[]>([]);
   const animationFrame = useRef<number>(0);
+  const breathFrame = useRef<number>(0);
+  const holdActive = useRef(false);
 
-  const orbColorClass = isSolarMode ? "orb-gradient-solar shadow-solar/40" : "orb-gradient-violet shadow-primary/40";
-  const glowColor = isSolarMode ? "hsl(var(--solar))" : "hsl(var(--primary))";
+  // Continuous breath animation
+  useEffect(() => {
+    let start = Date.now();
+    const animate = () => {
+      const elapsed = (Date.now() - start) / 1000;
+      setBreathPhase(Math.sin(elapsed * 0.5) * 0.5 + 0.5); // 0 to 1
+      breathFrame.current = requestAnimationFrame(animate);
+    };
+    breathFrame.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(breathFrame.current);
+  }, []);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.preventDefault(); // prevent scroll
+  const startHold = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    holdActive.current = true;
     setIsHolding(true);
     setProgress(0);
     holdStartTime.current = Date.now();
     lastMoveTime.current = Date.now();
     movementLatencies.current = [];
-    
-    const animateProgress = () => {
+
+    const tick = () => {
+      if (!holdActive.current) return;
       const elapsed = Date.now() - holdStartTime.current;
-      const currentProgress = Math.min(elapsed / 10000, 1); // 10 seconds
-      setProgress(currentProgress);
-      
-      if (currentProgress < 1) {
-        animationFrame.current = requestAnimationFrame(animateProgress);
+      const p = Math.min(elapsed / 10000, 1);
+      setProgress(p);
+      if (p < 1) {
+        animationFrame.current = requestAnimationFrame(tick);
       } else {
-        // Trigger checkin
+        holdActive.current = false;
         setIsHolding(false);
-        const totalDuration = Date.now() - holdStartTime.current;
-        const avgLatency = movementLatencies.current.length 
-          ? movementLatencies.current.reduce((a, b) => a + b, 0) / movementLatencies.current.length
-          : 0;
-        
-        onCheckinTrigger(totalDuration, avgLatency);
+        const avgLatency =
+          movementLatencies.current.length > 0
+            ? movementLatencies.current.reduce((a, b) => a + b, 0) / movementLatencies.current.length
+            : 400;
+        onCheckinTrigger(elapsed, avgLatency);
       }
     };
-    
-    animationFrame.current = requestAnimationFrame(animateProgress);
-  };
+    animationFrame.current = requestAnimationFrame(tick);
+  }, [onCheckinTrigger]);
 
-  const handlePointerUp = () => {
+  const endHold = useCallback(() => {
+    holdActive.current = false;
     setIsHolding(false);
     setProgress(0);
     cancelAnimationFrame(animationFrame.current);
-  };
+  }, []);
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isHolding) return;
+  const trackMove = useCallback((e: React.PointerEvent) => {
+    if (!holdActive.current) return;
     const now = Date.now();
     const latency = now - lastMoveTime.current;
-    if (latency > 0) {
+    if (latency > 0 && latency < 2000) {
       movementLatencies.current.push(latency);
     }
     lastMoveTime.current = now;
-  };
-
-  useEffect(() => {
-    return () => cancelAnimationFrame(animationFrame.current);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(animationFrame.current);
+      cancelAnimationFrame(breathFrame.current);
+    };
+  }, []);
+
+  const breathScale = 1 + breathPhase * 0.06;
+  const holdScale = isHolding ? 0.92 : breathScale;
+
+  const CIRCUMFERENCE = 2 * Math.PI * 118;
+
   return (
-    <div className="relative flex items-center justify-center w-64 h-64 mx-auto select-none touch-none">
-      {/* Progress Ring */}
-      <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 256 256">
-        <circle
-          cx="128"
-          cy="128"
-          r="120"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="text-white/5"
-        />
+    <div className="relative flex items-center justify-center w-72 h-72 select-none touch-none">
+      {/* Progress ring */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 288 288"
+        style={{ transform: "rotate(-90deg)" }}
+      >
+        <circle cx="144" cy="144" r="118" fill="none" stroke="white" strokeWidth="1" opacity="0.06" />
         <motion.circle
-          cx="128"
-          cy="128"
-          r="120"
+          cx="144"
+          cy="144"
+          r="118"
           fill="none"
-          stroke={glowColor}
-          strokeWidth="6"
+          stroke={isSolarMode ? "hsl(var(--solar))" : "hsl(var(--accent))"}
+          strokeWidth="3"
           strokeLinecap="round"
-          strokeDasharray="753.98" // 2 * PI * 120
-          strokeDashoffset={753.98 * (1 - progress)}
-          className="transition-all duration-75 ease-linear"
-          style={{ filter: "blur(2px)" }}
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+          style={{ filter: "blur(3px)" }}
         />
         <motion.circle
-          cx="128"
-          cy="128"
-          r="120"
+          cx="144"
+          cy="144"
+          r="118"
           fill="none"
           stroke="white"
-          strokeWidth="2"
+          strokeWidth="1.5"
           strokeLinecap="round"
-          strokeDasharray="753.98"
-          strokeDashoffset={753.98 * (1 - progress)}
-          className="transition-all duration-75 ease-linear mix-blend-overlay"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+          opacity={0.6}
         />
       </svg>
 
+      {/* Outer glow ring */}
+      <motion.div
+        className={cn(
+          "absolute w-56 h-56 rounded-full opacity-20",
+          isSolarMode ? "bg-solar" : "bg-accent"
+        )}
+        animate={{ scale: holdScale * 1.15 }}
+        transition={{ type: "spring", stiffness: 120, damping: 20 }}
+        style={{ filter: "blur(24px)" }}
+      />
+
       {/* The Stone */}
       <motion.div
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onPointerMove={handlePointerMove}
-        animate={{
-          scale: isHolding ? 0.95 : 1,
-          filter: isHolding ? "brightness(1.3)" : "brightness(1)",
-        }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        onPointerDown={startHold}
+        onPointerUp={endHold}
+        onPointerLeave={endHold}
+        onPointerCancel={endHold}
+        onPointerMove={trackMove}
+        animate={{ scale: holdScale, filter: isHolding ? "brightness(1.4)" : "brightness(1)" }}
+        transition={{ type: "spring", stiffness: 200, damping: 25 }}
         className={cn(
-          "w-48 h-48 rounded-full cursor-pointer",
-          "shadow-[0_0_60px_-10px_currentColor]",
-          "animate-breathe transition-colors duration-1000",
-          orbColorClass
+          "w-52 h-52 rounded-full cursor-pointer touch-none relative overflow-hidden",
+          isSolarMode
+            ? "bg-gradient-to-br from-solar via-orange-400 to-amber-500 shadow-[0_0_80px_-10px_hsl(var(--solar)/0.8)]"
+            : "bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 shadow-[0_0_80px_-10px_rgba(139,92,246,0.8)]"
         )}
+        style={{ userSelect: "none", WebkitUserSelect: "none" }}
       >
-        <div className="w-full h-full rounded-full bg-black/10 backdrop-blur-sm mix-blend-overlay"></div>
+        {/* Inner shimmer */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tl from-white/20 to-transparent" />
+        <div className="absolute top-4 left-6 w-8 h-8 rounded-full bg-white/30 blur-lg" />
       </motion.div>
-      
-      {/* Instruction text (fades out when holding) */}
-      <motion.div 
-        animate={{ opacity: isHolding ? 0 : 0.4 }}
-        className="absolute -bottom-16 text-sm font-display tracking-widest text-foreground text-center"
+
+      {/* Instruction */}
+      <motion.div
+        animate={{ opacity: isHolding ? 0 : 0.45 }}
+        transition={{ duration: 0.3 }}
+        className="absolute -bottom-14 text-center"
       >
-        HOLD TO CHECK IN
+        <p className="text-xs font-display tracking-[0.3em] text-white/50 uppercase">
+          {progress > 0.05 ? "Breathe..." : "Hold to check in"}
+        </p>
       </motion.div>
+
+      {/* Progress % while holding */}
+      {isHolding && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.6 }}
+          className="absolute pointer-events-none text-white font-display text-sm tracking-widest"
+        >
+          {Math.round(progress * 100)}%
+        </motion.div>
+      )}
     </div>
   );
 }

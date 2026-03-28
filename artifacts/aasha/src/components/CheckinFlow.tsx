@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Utensils, Coffee } from "lucide-react";
-import { useCreateCheckin } from "@workspace/api-client-react";
+import { Check, X, UtensilsCrossed, Utensils, Loader2 } from "lucide-react";
+import { useCreateCheckin, useGenerateInsight, useGetCheckins } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface CheckinFlowProps {
@@ -10,147 +11,267 @@ interface CheckinFlowProps {
   lon?: number | null;
   holdDurationMs: number;
   interactionLatencyMs: number;
-  onComplete: () => void;
+  onComplete: (bioNote?: string) => void;
 }
 
-type QuestionStep = 1 | 2 | 3 | 4;
+const fadeVariants = {
+  initial: { opacity: 0, scale: 0.92, filter: "blur(12px)" },
+  animate: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.5 } },
+  exit: { opacity: 0, scale: 1.05, filter: "blur(12px)", transition: { duration: 0.4 } },
+};
 
-export function CheckinFlow({ 
-  sessionId, 
-  lat, 
-  lon, 
-  holdDurationMs, 
-  interactionLatencyMs, 
-  onComplete 
+export function CheckinFlow({
+  sessionId,
+  lat,
+  lon,
+  holdDurationMs,
+  interactionLatencyMs,
+  onComplete,
 }: CheckinFlowProps) {
-  const [step, setStep] = useState<QuestionStep>(1);
-  const [attendedClass, setAttendedClass] = useState<boolean>(false);
-  const [ateWell, setAteWell] = useState<boolean>(false);
-  const [maskingLevel, setMaskingLevel] = useState<number>(3);
-  
-  const createCheckin = useCreateCheckin();
+  const [step, setStep] = useState<1 | 2 | 3 | "submitting" | "done">(1);
+  const [attendedClass, setAttendedClass] = useState(true);
+  const [ateWell, setAteWell] = useState(true);
+  const [maskingLevel, setMaskingLevel] = useState(3);
+  const [bioNote, setBioNote] = useState<string | null>(null);
 
-  const handleNext = async () => {
-    if (step === 3) {
-      setStep(4);
-      // Submit
+  const qc = useQueryClient();
+  const createCheckin = useCreateCheckin();
+  const generateInsight = useGenerateInsight();
+  const { data: checkins } = useGetCheckins({ sessionId, limit: 10 }, { query: { enabled: false } });
+
+  const submit = async (finalMasking: number) => {
+    setStep("submitting");
+    try {
+      await createCheckin.mutateAsync({
+        data: {
+          sessionId,
+          attendedClass,
+          ateWell,
+          maskingLevel: finalMasking,
+          holdDurationMs,
+          interactionLatencyMs,
+          lat: lat ?? null,
+          lon: lon ?? null,
+        },
+      });
+
+      // Invalidate queries so garden and checkins refresh
+      qc.invalidateQueries({ queryKey: ["getGarden"] });
+      qc.invalidateQueries({ queryKey: ["getCheckins"] });
+
+      // Generate a short bio-validation note
       try {
-        await createCheckin.mutateAsync({
+        const insight = await generateInsight.mutateAsync({
           data: {
             sessionId,
-            attendedClass,
-            ateWell,
-            maskingLevel,
-            holdDurationMs,
-            interactionLatencyMs,
-            lat,
-            lon
-          }
+            recentCheckins: checkins ?? [],
+          },
         });
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      } catch (err) {
-        console.error("Failed to check in", err);
-        onComplete();
+        setBioNote(insight.note);
+      } catch {
+        // Non-critical
       }
-    } else {
-      setStep((s) => (s + 1) as QuestionStep);
+
+      setStep("done");
+      setTimeout(() => onComplete(bioNote ?? undefined), 3500);
+    } catch {
+      onComplete();
     }
   };
 
-  const variants = {
-    initial: { opacity: 0, scale: 0.9, filter: "blur(10px)" },
-    animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
-    exit: { opacity: 0, scale: 1.1, filter: "blur(10px)" }
+  const pickClass = (val: boolean) => {
+    setAttendedClass(val);
+    setTimeout(() => setStep(2), 300);
   };
 
+  const pickFood = (val: boolean) => {
+    setAteWell(val);
+    setTimeout(() => setStep(3), 300);
+  };
+
+  const confirmMasking = () => submit(maskingLevel);
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-xl z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-2xl">
       <AnimatePresence mode="wait">
+        {/* Step 1: Attended class/work */}
         {step === 1 && (
-          <motion.div key="step1" {...variants} transition={{ duration: 0.6 }} className="flex flex-col items-center gap-12">
-            <h2 className="text-xl text-muted-foreground font-display tracking-widest uppercase">Class / Work</h2>
-            <div className="flex gap-8">
-              <button 
-                onClick={() => { setAttendedClass(false); handleNext(); }}
-                className="w-24 h-24 rounded-full bg-muted/30 border border-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-white transition-all active:scale-95"
-              >
-                <X size={40} strokeWidth={1.5} />
-              </button>
-              <button 
-                onClick={() => { setAttendedClass(true); handleNext(); }}
-                className="w-24 h-24 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent hover:bg-accent/20 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_-5px_hsl(var(--accent)/0.3)]"
-              >
-                <Check size={40} strokeWidth={2} />
-              </button>
+          <motion.div key="step1" {...fadeVariants} className="flex flex-col items-center gap-16">
+            {/* Icon: graduation cap / briefcase */}
+            <div className="flex flex-col items-center gap-4 text-white/40">
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <path d="M28 8L6 20l22 12 22-12L28 8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="currentColor" fillOpacity="0.1"/>
+                <path d="M6 20v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M17 26.5v8a11 11 0 0022 0v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Today</p>
             </div>
-          </motion.div>
-        )}
 
-        {step === 2 && (
-          <motion.div key="step2" {...variants} transition={{ duration: 0.6 }} className="flex flex-col items-center gap-12">
-            <h2 className="text-xl text-muted-foreground font-display tracking-widest uppercase">Nourishment</h2>
             <div className="flex gap-8">
-              <button 
-                onClick={() => { setAteWell(false); handleNext(); }}
-                className="w-24 h-24 rounded-full bg-muted/30 border border-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-white transition-all active:scale-95"
-              >
-                <Coffee size={36} strokeWidth={1.5} />
-              </button>
-              <button 
-                onClick={() => { setAteWell(true); handleNext(); }}
-                className="w-24 h-24 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary hover:bg-primary/20 hover:text-white transition-all active:scale-95 shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)]"
-              >
-                <Utensils size={36} strokeWidth={2} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 3 && (
-          <motion.div key="step3" {...variants} transition={{ duration: 0.6 }} className="flex flex-col items-center gap-16 w-full max-w-md px-8">
-            <h2 className="text-xl text-muted-foreground font-display tracking-widest uppercase text-center">Masking Level</h2>
-            
-            <div className="w-full relative py-8">
-              <input 
-                type="range" 
-                min="1" 
-                max="5" 
-                step="1"
-                value={maskingLevel}
-                onChange={(e) => setMaskingLevel(parseInt(e.target.value))}
-                className="w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-gradient-to-r [&::-webkit-slider-runnable-track]:from-accent [&::-webkit-slider-runnable-track]:to-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:-mt-3 [&::-webkit-slider-thumb]:shadow-[0_0_20px_rgba(255,255,255,0.5)]"
+              <ChoiceButton
+                label={<X size={40} strokeWidth={1.5} />}
+                accent="muted"
+                onClick={() => pickClass(false)}
               />
-              <div className="flex justify-between w-full mt-6 text-sm font-display text-muted-foreground">
-                <span>Authentic</span>
-                <span>Heavy</span>
+              <ChoiceButton
+                label={<Check size={40} strokeWidth={2} />}
+                accent="primary"
+                onClick={() => pickClass(true)}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2: Ate well */}
+        {step === 2 && (
+          <motion.div key="step2" {...fadeVariants} className="flex flex-col items-center gap-16">
+            <div className="flex flex-col items-center gap-4 text-white/40">
+              <Utensils size={52} strokeWidth={1} />
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Nourished</p>
+            </div>
+
+            <div className="flex gap-8">
+              <ChoiceButton
+                label={<UtensilsCrossed size={36} strokeWidth={1.5} />}
+                accent="muted"
+                onClick={() => pickFood(false)}
+              />
+              <ChoiceButton
+                label={<Utensils size={36} strokeWidth={2} />}
+                accent="accent"
+                onClick={() => pickFood(true)}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 3: Masking level slider */}
+        {step === 3 && (
+          <motion.div key="step3" {...fadeVariants} className="flex flex-col items-center gap-12 w-full max-w-xs px-8">
+            <div className="flex flex-col items-center gap-4 text-white/40">
+              {/* Mask icon */}
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <ellipse cx="26" cy="30" rx="18" ry="12" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.08"/>
+                <circle cx="18" cy="26" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <circle cx="34" cy="26" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M20 35 Q26 39 32 35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">How real are you feeling?</p>
+            </div>
+
+            {/* Slider */}
+            <div className="w-full space-y-6">
+              <div className="relative">
+                <div className="h-2 rounded-full bg-gradient-to-r from-emerald-500/60 via-violet-500/60 to-fuchsia-700/60 mb-2" />
+                <input
+                  type="range"
+                  min={1} max={5} step={1}
+                  value={maskingLevel}
+                  onChange={(e) => setMaskingLevel(+e.target.value)}
+                  className="w-full absolute top-0 opacity-0 h-8 cursor-pointer"
+                  style={{ margin: "-12px 0" }}
+                />
+                {/* Visual thumb indicator */}
+                <div
+                  className="w-7 h-7 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.4)] absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none transition-all duration-150"
+                  style={{ left: `${((maskingLevel - 1) / 4) * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-display tracking-widest text-white/30 uppercase">
+                <span>Fully you</span>
+                <span>Heavily masked</span>
               </div>
             </div>
 
-            <button 
-              onClick={handleNext}
-              className="px-8 py-3 rounded-full bg-white text-background font-display font-medium tracking-wide hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+            {/* Big dot indicators */}
+            <div className="flex gap-3">
+              {[1, 2, 3, 4, 5].map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setMaskingLevel(v)}
+                  className={cn(
+                    "w-8 h-8 rounded-full border transition-all duration-200",
+                    maskingLevel === v
+                      ? "bg-white/80 border-white/80 scale-110"
+                      : "bg-white/10 border-white/20 hover:bg-white/20"
+                  )}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={confirmMasking}
+              className="mt-4 px-10 py-3.5 rounded-full bg-white/10 border border-white/20 text-white font-display text-sm tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all"
             >
-              COMPLETE
+              Done
             </button>
           </motion.div>
         )}
 
-        {step === 4 && (
-          <motion.div key="step4" {...variants} transition={{ duration: 1 }} className="flex flex-col items-center gap-6">
-            <motion.div 
-              animate={{ rotate: 360, scale: [1, 1.2, 1] }} 
-              transition={{ duration: 2, ease: "easeInOut" }}
-              className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-accent opacity-50 blur-xl absolute"
-            />
-            <h2 className="text-2xl font-display text-white tracking-widest z-10">Recorded.</h2>
-            <p className="text-muted-foreground font-display z-10 text-center max-w-xs leading-relaxed">
-              Every day is different.<br/>Thank you for being honest.
-            </p>
+        {/* Submitting */}
+        {step === "submitting" && (
+          <motion.div key="submitting" {...fadeVariants} className="flex flex-col items-center gap-6">
+            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            <p className="text-xs font-display tracking-[0.3em] uppercase text-white/40">Recording...</p>
+          </motion.div>
+        )}
+
+        {/* Done: bio-validation */}
+        {step === "done" && (
+          <motion.div key="done" {...fadeVariants} className="flex flex-col items-center gap-8 px-10 max-w-sm text-center">
+            {/* Petal burst */}
+            <div className="relative w-20 h-20 flex items-center justify-center">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-3 h-5 rounded-full bg-gradient-to-b from-accent to-primary"
+                  style={{ transformOrigin: "bottom center", rotate: `${i * 45}deg`, bottom: "50%" }}
+                  initial={{ scaleY: 0, opacity: 0 }}
+                  animate={{ scaleY: 1, opacity: 0.7 }}
+                  transition={{ delay: i * 0.07, duration: 0.5, ease: "backOut" }}
+                />
+              ))}
+              <div className="w-5 h-5 rounded-full bg-accent z-10 shadow-[0_0_20px_hsl(var(--accent))]" />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-lg font-sans font-light text-white/90 leading-relaxed">
+                {bioNote ?? "Petal recorded. One more bloom."}
+              </p>
+              <p className="text-xs font-display tracking-[0.25em] text-white/30 uppercase">+1 Petal</p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function ChoiceButton({
+  label,
+  accent,
+  onClick,
+}: {
+  label: React.ReactNode;
+  accent: "primary" | "accent" | "muted";
+  onClick: () => void;
+}) {
+  const colors = {
+    primary: "border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)]",
+    accent: "border-teal-500/40 bg-teal-500/10 text-teal-300 hover:bg-teal-500/25 shadow-[0_0_30px_-5px_rgba(20,184,166,0.3)]",
+    muted: "border-white/15 bg-white/5 text-white/40 hover:bg-white/10",
+  };
+
+  return (
+    <motion.button
+      whileTap={{ scale: 0.9 }}
+      onClick={onClick}
+      className={cn(
+        "w-24 h-24 rounded-full border flex items-center justify-center transition-all duration-200",
+        colors[accent]
+      )}
+    >
+      {label}
+    </motion.button>
   );
 }
