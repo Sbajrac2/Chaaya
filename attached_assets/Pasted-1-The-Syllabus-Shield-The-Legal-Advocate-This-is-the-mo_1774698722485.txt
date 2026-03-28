@@ -1,0 +1,58 @@
+1. The "Syllabus Shield" (The Legal Advocate)
+This is the most "Ooh-Ahh" feature you can show a judge.
+
+The Problem: Stressed students are too paralyzed to email professors about being late.
+
+The Feature: A "Vault" where they upload their PDFs (Syllabi).
+
+The Magic: When they hit "Lighten the Load," Claude doesn't just write a generic email. It parses the PDF for the "Late Policy" or "Mental Health" clause.
+
+The Result: The drafted email says: "Per the 'Academic Flexibility' clause on page 4 of your syllabus, I am requesting a 48-hour extension..." It removes the shame by citing the professor's own rules.
+
+2. The "3-Second Bio-Lesson" (Nervous System Literacy)
+Duolingo teaches a word in seconds; Asha teaches Resilience.
+
+The Feature: After the 10s "Stone Hold," show a single "Validation Card."
+
+The Logic: Use the Lake Effect weather data.
+
+Example: "Oswego is 32°F and overcast today. Your body is burning 10% more energy just to maintain core temp. Your fatigue is biological, not a personal failure. +10 Wisdom XP."
+
+The Hook: A satisfying "Ding" sound and a level-up bar.
+
+3. The "Focus Funnel" (Decision Paralysis Killer)
+When the "Stone" detects high stress (via shaky thumb movements), it triggers a Focus Mode.
+
+The Feature: Ask the user for 3 tasks they are avoiding.
+
+The Unique Fix: The AI hides 2 of them.
+
+The Result: "It’s gray outside and your energy is 2/5. We are ignoring the Lab Report. We are doing the 10-minute Discussion Post only. Go."
+
+4. The "Resilience Path" (The Skill Tree)
+Instead of a dashboard, replace it with a Vertical Map (like Duolingo’s course).
+
+Node 1: Baseline (Complete 3 check-ins).
+
+Node 2: Weather Resistance (Unlock the Solar Glow).
+
+Node 3: The Syllabus Shield (Unlock the AI-Extension drafter).
+
+Node 4: Mastery (Achieve "Steady Thumb" score for 3 days).
+
+📋 The "Power Update" Replit Prompt
+Tell your Replit Agent to implement these specific "Utility" blocks:
+
+"Overhaul the Asha app with the following 'High-Utility' features:
+
+PDF Syllabus Vault: Add a 'Vault' for PDF uploads. Use Claude to extract 'Late Policy' text.
+
+Contextual Drafting: Update the 'Lighten the Load' button so the AI email explicitly quotes the 'Late Policy' from the specific syllabus of that class.
+
+The Stability Metric: Record the x,y coordinates of the thumb-press at 60fps. If the 'Stability Score' is low, have Claude mention 'Nervous System Noise' in the daily note.
+
+The Path UI: Create a vertical 'Skill Tree' (Duolingo style). Nodes turn bioluminescent violet when unlocked.
+
+Bio-Validation Cards: After every check-in, show a single card that explains how today's weather (Oswego Lake Effect) is physically impacting their energy levels.
+
+Audio Feedback: Add a 'Ding' sound for successful check-ins and a leveling-up animation."

@@ -33,7 +33,15 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
         data: {
           sessionId,
           recentCheckins: checkins,
-          weatherData: weather,
+          weatherData: weather || {
+            temperature: 20,
+            description: "Unable to load weather",
+            uvIndex: 3,
+            sunlightHours: 6,
+            barometricPressure: 1013,
+            isLowSunlight: false,
+            city: "Your location",
+          },
           academicWeek: getAcademicWeek(),
         },
       });
@@ -76,12 +84,22 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
                   Asha is reading<br />the patterns...
                 </p>
               </div>
+            ) : insight.error ? (
+              <div className="flex flex-col items-center gap-4 text-white/30 pt-6">
+                <p className="text-base text-white/50">Couldn't read the patterns.</p>
+                <button
+                  onClick={() => { setHasTriggered(false); }}
+                  className="text-xs text-violet-400 underline"
+                >
+                  Try again
+                </button>
+              </div>
             ) : (
               <div className="flex flex-col gap-8 pt-2">
                 <Sparkles size={20} className="text-violet-400/50" />
 
                 <p className="text-xl font-sans font-light text-white/90 leading-relaxed">
-                  "{insight.data?.note ?? "The stone feels heavy. You showed up anyway."}"
+                  "{insight.data?.note || "The stone feels heavy. You showed up anyway."}"
                 </p>
 
                 {insight.data?.showLightenLoad && (
