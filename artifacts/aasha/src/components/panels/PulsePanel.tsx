@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { useGetCommunityPulse } from "@workspace/api-client-react";
-import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, Heart } from "lucide-react";
 
 export function PulsePanel() {
   const { data: pulse, isLoading } = useGetCommunityPulse({
     query: { staleTime: 1000 * 60 * 5, refetchOnMount: true },
   });
+  const [sentLight, setSentLight] = useState(false);
+  const [lightCount, setLightCount] = useState(0);
+  const [tappedDots, setTappedDots] = useState<Set<number>>(new Set());
 
   if (isLoading) {
     return (
@@ -18,15 +22,27 @@ export function PulsePanel() {
 
   const percentage = pulse?.percentageDarkStretch ?? 0;
   const CIRCUMFERENCE = 2 * Math.PI * 54;
-
-  // Heatmap-style dots for community visualization
-  const totalDots = 48;
+  const totalDots = 36;
   const darkDots = Math.round((percentage / 100) * totalDots);
 
+  const handleDotTap = (index: number) => {
+    if (index < darkDots && !tappedDots.has(index)) {
+      const next = new Set(tappedDots);
+      next.add(index);
+      setTappedDots(next);
+    }
+  };
+
+  const handleSendLight = () => {
+    if (!sentLight) {
+      setSentLight(true);
+      setLightCount((c) => c + 1);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center px-7 pt-4 pb-16 gap-10">
-      {/* Ring */}
-      <div className="relative w-44 h-44 flex items-center justify-center">
+    <div className="flex flex-col items-center px-7 pt-3 pb-16 gap-6 overflow-y-auto">
+      <div className="relative w-40 h-40 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 120 120" style={{ transform: "rotate(-90deg)" }}>
           <circle cx="60" cy="60" r="54" fill="none" stroke="white" strokeWidth="2" opacity="0.05" />
           <motion.circle
@@ -52,7 +68,7 @@ export function PulsePanel() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.5 }}
-            className="text-4xl font-display font-thin text-white"
+            className="text-3xl font-display font-thin text-white"
           >
             {Math.round(percentage)}%
           </motion.p>
@@ -60,35 +76,50 @@ export function PulsePanel() {
         </div>
       </div>
 
-      {/* Dot heatmap */}
       <div className="w-full">
-        <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/20 mb-4 text-center">Community tonight</p>
+        <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/20 mb-3 text-center">
+          Community tonight — tap to send light
+        </p>
         <div className="flex flex-wrap gap-2 justify-center max-w-xs mx-auto">
-          {Array.from({ length: totalDots }).map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.02, duration: 0.3 }}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                i < darkDots
-                  ? "bg-violet-500/60 shadow-[0_0_6px_rgba(139,92,246,0.4)]"
-                  : "bg-white/10"
-              }`}
-            />
-          ))}
+          {Array.from({ length: totalDots }).map((_, i) => {
+            const isDark = i < darkDots;
+            const wasTapped = tappedDots.has(i);
+            return (
+              <motion.button
+                key={i}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.02, duration: 0.3 }}
+                onClick={() => handleDotTap(i)}
+                className={`w-4 h-4 rounded-full transition-all duration-500 ${
+                  wasTapped
+                    ? "bg-amber-400/70 shadow-[0_0_12px_rgba(251,191,36,0.5)] scale-110"
+                    : isDark
+                    ? "bg-violet-500/50 shadow-[0_0_6px_rgba(139,92,246,0.3)] hover:bg-violet-400/60 cursor-pointer"
+                    : "bg-white/10"
+                }`}
+              />
+            );
+          })}
         </div>
-        <p className="text-[9px] text-white/20 text-center mt-3">Each dot = one person</p>
+        {tappedDots.size > 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-[10px] text-amber-400/50 text-center mt-3"
+          >
+            You sent light to {tappedDots.size} {tappedDots.size === 1 ? "person" : "people"}
+          </motion.p>
+        )}
       </div>
 
-      {/* Message */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
-        className="text-center space-y-4 max-w-xs"
+        className="text-center space-y-3 max-w-xs"
       >
-        <p className="text-base font-sans font-light text-white/75 leading-relaxed">
+        <p className="text-sm font-sans font-light text-white/65 leading-relaxed">
           {pulse?.message ?? "Many are navigating a heavy stretch right now."}
         </p>
         <p className="text-[10px] font-display tracking-[0.4em] uppercase text-white/25">
@@ -96,10 +127,36 @@ export function PulsePanel() {
         </p>
       </motion.div>
 
-      {/* Stats */}
-      <div className="flex gap-6 w-full justify-center">
+      <motion.button
+        whileTap={{ scale: 0.92 }}
+        onClick={handleSendLight}
+        disabled={sentLight}
+        className={`flex items-center gap-3 px-7 py-4 rounded-2xl border transition-all duration-500 ${
+          sentLight
+            ? "bg-amber-500/15 border-amber-500/30"
+            : "bg-white/5 border-white/15 hover:bg-violet-500/10 hover:border-violet-500/20"
+        }`}
+      >
+        <motion.div
+          animate={sentLight ? { scale: [1, 1.3, 1] } : {}}
+          transition={{ duration: 0.5 }}
+        >
+          <Heart
+            size={20}
+            className={sentLight ? "text-amber-400 fill-amber-400" : "text-white/40"}
+          />
+        </motion.div>
+        <span className={`text-sm font-display tracking-widest uppercase ${
+          sentLight ? "text-amber-300/80" : "text-white/50"
+        }`}>
+          {sentLight ? "Light sent" : "Share your light"}
+        </span>
+      </motion.button>
+
+      <div className="flex gap-6 w-full justify-center mt-1">
         <Stat label="Active" value={`${pulse?.totalUsers ?? 0}`} />
         <Stat label="Avg masking" value={`${pulse?.averageMaskingLevel?.toFixed(1) ?? "—"}/5`} />
+        {sentLight && <Stat label="Lights sent" value={`${lightCount}`} />}
       </div>
     </div>
   );
@@ -108,7 +165,7 @@ export function PulsePanel() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center">
-      <p className="text-xl font-display font-light text-white/70">{value}</p>
+      <p className="text-lg font-display font-light text-white/60">{value}</p>
       <p className="text-[9px] font-display tracking-widest uppercase text-white/25 mt-1">{label}</p>
     </div>
   );

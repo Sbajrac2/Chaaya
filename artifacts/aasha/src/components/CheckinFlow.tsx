@@ -2,8 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, X, Utensils, UtensilsCrossed, Loader2,
-  Sun, Moon, Coffee, HandHeart, BrainCog, DoorOpen, DoorClosed,
-  SunMedium, CloudOff, ListChecks, ListX, Clock
+  DoorOpen, DoorClosed, Sun, BrainCog, HandHeart
 } from "lucide-react";
 import { useCreateCheckin, useGenerateBioValidation } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,15 +18,9 @@ interface CheckinFlowProps {
   onComplete: (bioNote?: string) => void;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | "submitting" | "bio" | "done";
+type Step = 1 | 2 | 3 | 4 | "submitting" | "bio" | "done";
 
-const TOTAL_STEPS = 10;
-const WAKE_OPTIONS = [
-  { label: "Before 7", value: "6:30 AM", icon: <Moon size={22} strokeWidth={1.5} /> },
-  { label: "7 – 9", value: "8:00 AM", icon: <SunMedium size={22} strokeWidth={1.5} /> },
-  { label: "9 – 11", value: "10:00 AM", icon: <Sun size={22} strokeWidth={1.5} /> },
-  { label: "After 11", value: "11:30 AM", icon: <Clock size={22} strokeWidth={1.5} /> },
-];
+const TOTAL_STEPS = 4;
 
 const fadeVariants = {
   initial: { opacity: 0, scale: 0.92, filter: "blur(12px)" },
@@ -46,14 +39,8 @@ export function CheckinFlow({
   const [step, setStep] = useState<Step>(1);
   const [attendedClass, setAttendedClass] = useState(true);
   const [ateWell, setAteWell] = useState(true);
-  const [maskingLevel, setMaskingLevel] = useState(3);
-  const [wakeTime, setWakeTime] = useState<string | null>(null);
   const [leftRoom, setLeftRoom] = useState<boolean | null>(null);
-  const [hadPhysicalContact, setHadPhysicalContact] = useState<boolean | null>(null);
-  const [hadCognitiveFriction, setHadCognitiveFriction] = useState<boolean | null>(null);
-  const [hadSunlightExposure, setHadSunlightExposure] = useState<boolean | null>(null);
-  const [usedSubstanceCoping, setUsedSubstanceCoping] = useState<boolean | null>(null);
-  const [completedTask, setCompletedTask] = useState<boolean | null>(null);
+  const [maskingLevel, setMaskingLevel] = useState(3);
   const [bioCard, setBioCard] = useState<{ card: string; xpGained: number; factType: string } | null>(null);
 
   const qc = useQueryClient();
@@ -68,6 +55,7 @@ export function CheckinFlow({
   const submit = async (finalMasking: number) => {
     setStep("submitting");
     try {
+      const hour = new Date().getHours();
       const result = await createCheckin.mutateAsync({
         data: {
           sessionId,
@@ -78,13 +66,8 @@ export function CheckinFlow({
           interactionLatencyMs,
           lat: lat ?? null,
           lon: lon ?? null,
-          wakeTime,
           leftRoom,
-          hadPhysicalContact,
-          hadCognitiveFriction,
-          hadSunlightExposure,
-          usedSubstanceCoping,
-          completedTask,
+          hadSunlightExposure: hour >= 7 && hour <= 18 ? true : null,
         },
       });
 
@@ -129,7 +112,7 @@ export function CheckinFlow({
               key={i}
               className={cn(
                 "h-1 rounded-full transition-all duration-300",
-                i < currentStepNum ? "bg-violet-500/70 w-6" : "bg-white/10 w-3"
+                i < currentStepNum ? "bg-violet-500/70 w-8" : "bg-white/10 w-4"
               )}
               layout
             />
@@ -157,25 +140,15 @@ export function CheckinFlow({
         )}
 
         {step === 2 && (
-          <motion.div key="wake" {...fadeVariants} className="flex flex-col items-center gap-10">
-            <div className="flex flex-col items-center gap-3 text-white/40">
-              <Clock size={44} strokeWidth={1} />
-              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Wake time</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 w-full max-w-xs px-4">
-              {WAKE_OPTIONS.map((opt) => (
-                <motion.button
-                  key={opt.label}
-                  whileTap={{ scale: 0.92 }}
-                  onClick={() => { setWakeTime(opt.value); advance(3); }}
-                  className="flex flex-col items-center gap-2 px-4 py-4 rounded-2xl border border-white/15 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 transition-all"
-                >
-                  {opt.icon}
-                  <span className="text-[10px] font-display tracking-widest uppercase">{opt.label}</span>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
+          <BinaryStep
+            key="food"
+            icon={<Utensils size={48} strokeWidth={1} />}
+            label="Nourished?"
+            yesIcon={<Utensils size={32} strokeWidth={2} />}
+            noIcon={<UtensilsCrossed size={32} strokeWidth={1.5} />}
+            onYes={() => { setAteWell(true); advance(3); }}
+            onNo={() => { setAteWell(false); advance(3); }}
+          />
         )}
 
         {step === 3 && (
@@ -191,78 +164,6 @@ export function CheckinFlow({
         )}
 
         {step === 4 && (
-          <BinaryStep
-            key="food"
-            icon={<Utensils size={48} strokeWidth={1} />}
-            label="Nourished?"
-            yesIcon={<Utensils size={32} strokeWidth={2} />}
-            noIcon={<UtensilsCrossed size={32} strokeWidth={1.5} />}
-            onYes={() => { setAteWell(true); advance(5); }}
-            onNo={() => { setAteWell(false); advance(5); }}
-          />
-        )}
-
-        {step === 5 && (
-          <BinaryStep
-            key="sunlight"
-            icon={<Sun size={48} strokeWidth={1} />}
-            label="Daylight today?"
-            yesIcon={<SunMedium size={32} strokeWidth={2} />}
-            noIcon={<CloudOff size={32} strokeWidth={1.5} />}
-            onYes={() => { setHadSunlightExposure(true); advance(6); }}
-            onNo={() => { setHadSunlightExposure(false); advance(6); }}
-          />
-        )}
-
-        {step === 6 && (
-          <BinaryStep
-            key="contact"
-            icon={<HandHeart size={48} strokeWidth={1} />}
-            label="Human touch?"
-            yesIcon={<Check size={32} strokeWidth={2} />}
-            noIcon={<X size={32} strokeWidth={1.5} />}
-            onYes={() => { setHadPhysicalContact(true); advance(7); }}
-            onNo={() => { setHadPhysicalContact(false); advance(7); }}
-          />
-        )}
-
-        {step === 7 && (
-          <BinaryStep
-            key="friction"
-            icon={<BrainCog size={48} strokeWidth={1} />}
-            label="Hard to start things?"
-            yesIcon={<Check size={32} strokeWidth={2} />}
-            noIcon={<X size={32} strokeWidth={1.5} />}
-            onYes={() => { setHadCognitiveFriction(true); advance(8); }}
-            onNo={() => { setHadCognitiveFriction(false); advance(8); }}
-          />
-        )}
-
-        {step === 8 && (
-          <BinaryStep
-            key="substance"
-            icon={<Coffee size={48} strokeWidth={1} />}
-            label="Needed caffeine or alcohol?"
-            yesIcon={<Check size={32} strokeWidth={2} />}
-            noIcon={<X size={32} strokeWidth={1.5} />}
-            onYes={() => { setUsedSubstanceCoping(true); advance(9); }}
-            onNo={() => { setUsedSubstanceCoping(false); advance(9); }}
-          />
-        )}
-
-        {step === 9 && (
-          <BinaryStep
-            key="task"
-            icon={<ListChecks size={48} strokeWidth={1} />}
-            label="Finished something?"
-            yesIcon={<ListChecks size={32} strokeWidth={2} />}
-            noIcon={<ListX size={32} strokeWidth={1.5} />}
-            onYes={() => { setCompletedTask(true); advance(10); }}
-            onNo={() => { setCompletedTask(false); advance(10); }}
-          />
-        )}
-
-        {step === 10 && (
           <motion.div key="masking" {...fadeVariants} className="flex flex-col items-center gap-10 w-full max-w-xs px-8">
             <div className="flex flex-col items-center gap-3 text-white/40">
               <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
@@ -278,9 +179,7 @@ export function CheckinFlow({
               <div className="relative">
                 <div className="h-2 rounded-full bg-gradient-to-r from-emerald-500/60 via-violet-500/60 to-fuchsia-700/60 mb-2" />
                 <input
-                  type="range"
-                  min={1} max={5} step={1}
-                  value={maskingLevel}
+                  type="range" min={1} max={5} step={1} value={maskingLevel}
                   onChange={(e) => setMaskingLevel(+e.target.value)}
                   className="w-full absolute top-0 opacity-0 h-8 cursor-pointer"
                   style={{ margin: "-12px 0" }}
@@ -337,7 +236,6 @@ export function CheckinFlow({
             className="flex flex-col items-center gap-8 px-8 max-w-sm text-center"
           >
             <FactTypeIcon factType={bioCard.factType} />
-
             <div className="space-y-4">
               <p className="text-base font-sans font-light text-white/85 leading-relaxed">
                 {bioCard.card}
@@ -353,7 +251,6 @@ export function CheckinFlow({
                 </span>
               </motion.div>
             </div>
-
             <button
               onClick={() => onComplete()}
               className="mt-2 px-8 py-3 rounded-full bg-white/8 border border-white/15 text-white/60 font-display text-xs tracking-widest uppercase hover:bg-white/15 active:scale-95 transition-all"
@@ -379,9 +276,7 @@ export function CheckinFlow({
               <div className="w-5 h-5 rounded-full bg-accent z-10 shadow-[0_0_20px_hsl(var(--accent))]" />
             </div>
             <div className="space-y-3">
-              <p className="text-lg font-sans font-light text-white/90 leading-relaxed">
-                Petal recorded. One more bloom.
-              </p>
+              <p className="text-lg font-sans font-light text-white/90">Petal recorded.</p>
               <p className="text-xs font-display tracking-[0.25em] text-white/30 uppercase">+1 Petal</p>
             </div>
           </motion.div>
@@ -392,19 +287,11 @@ export function CheckinFlow({
 }
 
 function BinaryStep({
-  icon,
-  label,
-  yesIcon,
-  noIcon,
-  onYes,
-  onNo,
+  icon, label, yesIcon, noIcon, onYes, onNo,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  yesIcon: React.ReactNode;
-  noIcon: React.ReactNode;
-  onYes: () => void;
-  onNo: () => void;
+  icon: React.ReactNode; label: string;
+  yesIcon: React.ReactNode; noIcon: React.ReactNode;
+  onYes: () => void; onNo: () => void;
 }) {
   return (
     <motion.div {...fadeVariants} className="flex flex-col items-center gap-14">
@@ -413,20 +300,14 @@ function BinaryStep({
         <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">{label}</p>
       </div>
       <div className="flex gap-8">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onNo}
-          className="w-22 h-22 rounded-full border border-white/15 bg-white/5 text-white/40 hover:bg-white/10 flex items-center justify-center transition-all duration-200"
-          style={{ width: 88, height: 88 }}
-        >
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onNo}
+          className="rounded-full border border-white/15 bg-white/5 text-white/40 hover:bg-white/10 flex items-center justify-center transition-all duration-200"
+          style={{ width: 88, height: 88 }}>
           {noIcon}
         </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={onYes}
-          className="w-22 h-22 rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] flex items-center justify-center transition-all duration-200"
-          style={{ width: 88, height: 88 }}
-        >
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onYes}
+          className="rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] flex items-center justify-center transition-all duration-200"
+          style={{ width: 88, height: 88 }}>
           {yesIcon}
         </motion.button>
       </div>
@@ -437,17 +318,15 @@ function BinaryStep({
 function FactTypeIcon({ factType }: { factType: string }) {
   const iconMap: Record<string, React.ReactNode> = {
     weather: <Sun size={32} className="text-amber-400" />,
-    circadian: <Moon size={32} className="text-indigo-400" />,
+    circadian: <BrainCog size={32} className="text-indigo-400" />,
     isolation: <HandHeart size={32} className="text-teal-400" />,
     nutrition: <Utensils size={32} className="text-emerald-400" />,
     cognitive: <BrainCog size={32} className="text-violet-400" />,
     general: <Check size={32} className="text-white/50" />,
   };
-
   return (
     <motion.div
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
+      initial={{ scale: 0 }} animate={{ scale: 1 }}
       transition={{ type: "spring", damping: 12 }}
       className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
     >

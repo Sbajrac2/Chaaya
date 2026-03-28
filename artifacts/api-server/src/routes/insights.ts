@@ -56,7 +56,19 @@ router.post("/insights", async (req, res) => {
       + (wakeTimeDrift > 1.5 ? 1 : 0);
 
     const cognitiveLoad = cognitiveLoadScore >= 4 ? "high" : cognitiveLoadScore >= 2 ? "moderate" : "low";
-    const showLightenLoad = cognitiveLoad === "high" || (cognitiveLoad === "moderate" && (missedClassCount > 0 || isolationCount > 2));
+    const showLightenLoad = true;
+
+    const patterns: string[] = [];
+    if (lateNightCount > 1) patterns.push(`${lateNightCount} late-night sessions — your sleep rhythm may be shifting`);
+    if (missedClassCount > 0) patterns.push(`Missed ${missedClassCount} day${missedClassCount > 1 ? "s" : ""} of showing up`);
+    if (skippedMealsCount > 1) patterns.push(`Skipped meals ${skippedMealsCount} times recently`);
+    if (isolationCount > 1) patterns.push(`${isolationCount} days without leaving your room`);
+    if (cognitiveFrictionCount > 1) patterns.push(`Struggled to start tasks ${cognitiveFrictionCount} times`);
+    if (wakeTimeDrift > 1.5) patterns.push(`Wake time drifting by ${wakeTimeDrift.toFixed(1)}h (social jet lag)`);
+    if (substanceCount > 0) patterns.push(`Used caffeine/alcohol to cope ${substanceCount} time${substanceCount > 1 ? "s" : ""}`);
+    if (avgMasking > 3.5) patterns.push(`High masking level (${avgMasking.toFixed(1)}/5) — a lot of emotional labor`);
+    if (noSunlightCount > 1) patterns.push(`${noSunlightCount} days without sunlight exposure`);
+    if (patterns.length === 0 && checkinCount > 0) patterns.push("Consistent check-ins — your awareness is itself a strength");
 
     const weatherContext = weatherData
       ? `Weather: ${weatherData.description}, ${weatherData.temperature}°C, ${weatherData.sunlightHours}h of sunlight today, UV index ${weatherData.uvIndex}. ${weatherData.isLowSunlight ? "Very low sunlight — this affects mood and energy significantly." : ""}`
@@ -117,6 +129,7 @@ Write a "Note from Asha" — warm, specific, validating. 2-4 sentences. Referenc
       cognitiveLoad,
       showLightenLoad,
       sanctuarySuggestion,
+      patterns,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to generate insight");

@@ -14,4 +14,6 @@ export interface InsightResponse {
   sanctuarySuggestion?: string | null;
   /** A scientific bio-validation insight about how environmental factors affect the user */
   bioValidation?: string | null;
+  /** Specific behavioral patterns Asha noticed from recent check-ins */
+  patterns?: string[];
 }

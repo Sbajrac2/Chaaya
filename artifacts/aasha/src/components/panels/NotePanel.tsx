@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGenerateInsight, useGenerateExtensionEmail, useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, MapPin, Loader2, ArrowLeft } from "lucide-react";
+import { Sparkles, Mail, MapPin, Loader2, ArrowLeft, Brain, Eye, Moon, Activity } from "lucide-react";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
 interface NotePanelProps {
@@ -10,6 +10,13 @@ interface NotePanelProps {
 }
 
 type View = "note" | "email-form" | "email-result" | "sanctuary";
+
+const READING_SIGNALS = [
+  { icon: Moon, label: "Sleep patterns" },
+  { icon: Eye, label: "Masking trends" },
+  { icon: Activity, label: "Energy signals" },
+  { icon: Brain, label: "Behavioral shifts" },
+];
 
 export function NotePanel({ sessionId, weather }: NotePanelProps) {
   const [view, setView] = useState<View>("note");
@@ -63,7 +70,6 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
   return (
     <div className="flex flex-col h-full px-7 pt-4 pb-16 overflow-y-auto">
       <AnimatePresence mode="wait">
-        {/* Main note view */}
         {view === "note" && (
           <motion.div
             key="note"
@@ -73,15 +79,35 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
             className="flex flex-col flex-1"
           >
             {insight.isPending || (!insight.data && !insight.error) ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-6 text-white/30">
+              <div className="flex-1 flex flex-col items-center justify-center gap-8 text-white/30">
                 <motion.div
                   animate={{ rotate: [0, 360] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 >
                   <Sparkles size={28} className="text-violet-400/60" />
                 </motion.div>
-                <p className="text-[10px] font-display tracking-[0.3em] uppercase text-center leading-loose">
-                  Asha is reading<br />the patterns...
+                <div className="space-y-3">
+                  {READING_SIGNALS.map((signal, i) => (
+                    <motion.div
+                      key={signal.label}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 0.6, x: 0 }}
+                      transition={{ delay: i * 0.4 + 0.5, duration: 0.4 }}
+                      className="flex items-center gap-3"
+                    >
+                      <signal.icon size={14} className="text-violet-400/40" />
+                      <p className="text-[11px] font-display tracking-widest text-white/25">{signal.label}</p>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: 40 + Math.random() * 30 }}
+                        transition={{ delay: i * 0.4 + 0.8, duration: 0.6 }}
+                        className="h-1 rounded-full bg-violet-500/20"
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+                <p className="text-[10px] font-display tracking-[0.3em] uppercase text-center text-white/20 mt-2">
+                  Reading your patterns...
                 </p>
               </div>
             ) : insight.error ? (
@@ -95,47 +121,57 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-8 pt-2">
+              <div className="flex flex-col gap-6 pt-2">
                 <Sparkles size={20} className="text-violet-400/50" />
 
-                <p className="text-xl font-sans font-light text-white/90 leading-relaxed">
+                <p className="text-lg font-sans font-light text-white/90 leading-relaxed">
                   "{insight.data?.note || "The stone feels heavy. You showed up anyway."}"
                 </p>
 
-                {insight.data?.showLightenLoad && (
-                  <div className="space-y-3 pt-2">
-                    <p className="text-[9px] font-display tracking-[0.35em] uppercase text-white/25 mb-3">
-                      Lighten the Load
+                {insight.data?.patterns && insight.data.patterns.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-display tracking-[0.35em] uppercase text-white/20">
+                      What Asha noticed
                     </p>
-                    <ActionCard
-                      icon={<Mail size={18} />}
-                      label="Draft extension email"
-                      color="violet"
-                      onClick={() => setView("email-form")}
-                    />
-                    <ActionCard
-                      icon={<MapPin size={18} />}
-                      label="Find sanctuary"
-                      color="teal"
-                      onClick={() => setView("sanctuary")}
-                    />
+                    {insight.data.patterns.map((p: string, i: number) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.15 }}
+                        className="flex items-start gap-3 px-4 py-3 rounded-xl bg-white/4 border border-white/8"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-violet-400/50 mt-1.5 flex-shrink-0" />
+                        <p className="text-xs text-white/50 leading-relaxed">{p}</p>
+                      </motion.div>
+                    ))}
                   </div>
                 )}
 
-                {insight.error && (
-                  <button
-                    onClick={() => { setHasTriggered(false); }}
-                    className="text-xs text-white/30 underline"
-                  >
-                    Retry
-                  </button>
-                )}
+                <div className="space-y-3 pt-3">
+                  <p className="text-[9px] font-display tracking-[0.35em] uppercase text-white/25 mb-3">
+                    Lighten the Load
+                  </p>
+                  <ActionCard
+                    icon={<Mail size={18} />}
+                    label="Draft extension email"
+                    sublabel="Asha writes it for you"
+                    color="violet"
+                    onClick={() => setView("email-form")}
+                  />
+                  <ActionCard
+                    icon={<MapPin size={18} />}
+                    label="Find sanctuary"
+                    sublabel="Quiet spots near you"
+                    color="teal"
+                    onClick={() => setView("sanctuary")}
+                  />
+                </div>
               </div>
             )}
           </motion.div>
         )}
 
-        {/* Email form */}
         {view === "email-form" && (
           <motion.div
             key="email-form"
@@ -147,6 +183,10 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
             <button onClick={() => setView("note")} className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors mb-2">
               <ArrowLeft size={16} /> <span className="text-xs font-display tracking-widest uppercase">Back</span>
             </button>
+
+            <p className="text-sm text-white/60 leading-relaxed">
+              Need more time on an assignment? Asha will draft a warm, professional email to your professor.
+            </p>
 
             <div className="space-y-3">
               {[
@@ -174,12 +214,11 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
             </button>
 
             <p className="text-[10px] text-white/20 text-center leading-relaxed">
-              Asha will write a warm, professional email and open your mail app.
+              Opens your mail app with the email ready to send.
             </p>
           </motion.div>
         )}
 
-        {/* Email result */}
         {view === "email-result" && (
           <motion.div
             key="email-result"
@@ -210,7 +249,6 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
           </motion.div>
         )}
 
-        {/* Sanctuary */}
         {view === "sanctuary" && (
           <motion.div
             key="sanctuary"
@@ -227,7 +265,7 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
               <MapPin size={20} className="text-teal-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-white/70 leading-relaxed">
                 {insight.data?.sanctuarySuggestion ??
-                  "Find somewhere quiet and low-stimulation — near a window if you can. 10 minutes of stillness is recovery. You don't have to do anything."}
+                  "Find somewhere quiet and low-stimulation — near a window if you can. 10 minutes of stillness is recovery."}
               </p>
             </div>
 
@@ -252,15 +290,10 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
 }
 
 function ActionCard({
-  icon,
-  label,
-  color,
-  onClick,
+  icon, label, sublabel, color, onClick,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  color: "violet" | "teal";
-  onClick: () => void;
+  icon: React.ReactNode; label: string; sublabel: string;
+  color: "violet" | "teal"; onClick: () => void;
 }) {
   const colorMap = {
     violet: "bg-violet-500/10 border-violet-500/20 text-violet-400",
@@ -272,7 +305,10 @@ function ActionCard({
       className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all hover:brightness-125 active:scale-97 ${colorMap[color]}`}
     >
       <div className="flex-shrink-0">{icon}</div>
-      <span className="text-sm font-display tracking-wide text-white/70">{label}</span>
+      <div className="text-left">
+        <span className="text-sm font-display tracking-wide text-white/70 block">{label}</span>
+        <span className="text-[10px] text-white/25">{sublabel}</span>
+      </div>
     </button>
   );
 }
@@ -280,8 +316,6 @@ function ActionCard({
 function getAcademicWeek(): number {
   const now = new Date();
   const month = now.getMonth() + 1;
-  const day = now.getDate();
-  // Rough semester mapping (Spring: Jan 13 = week 1, Fall: Aug 26 = week 1)
   if (month >= 1 && month <= 5) {
     const start = new Date(now.getFullYear(), 0, 13);
     return Math.ceil((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));

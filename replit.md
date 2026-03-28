@@ -24,12 +24,12 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 - Serves at `/` (root)
 - Key components:
   - `src/components/Orb.tsx` — The glowing worry stone orb with breath animation + progress ring
-  - `src/components/CheckinFlow.tsx` — 10-step behavioral check-in (class, wake time, left room, nourished, sunlight, human touch, cognitive friction, substance coping, task completion, masking level)
+  - `src/components/CheckinFlow.tsx` — 4-step check-in (showed up, nourished, left room, masking slider) + bio-validation card
   - `src/components/InsightsView.tsx` — 4-tab insight panel (Garden/Asha/Pulse/Focus) with swipe + tap navigation
-  - `src/components/panels/GardenPanel.tsx` — Resilience garden (golden-angle phyllotaxis petals)
-  - `src/components/panels/NotePanel.tsx` — Asha's AI note + Lighten the Load (email drafting + sanctuary)
-  - `src/components/panels/PulsePanel.tsx` — Anonymous campus stress heatmap with ring gauge
-  - `src/components/panels/FocusFunnelPanel.tsx` — One-Task Mode (enter 3 tasks, AI picks best for current energy)
+  - `src/components/panels/GardenPanel.tsx` — Visual flower garden (SVG flowers per day, tap to see stats)
+  - `src/components/panels/NotePanel.tsx` — Asha's AI note with visible patterns + always-shown Lighten the Load (email drafting + sanctuary)
+  - `src/components/panels/PulsePanel.tsx` — Interactive community pulse: tap dots to send light, share your light button
+  - `src/components/panels/FocusFunnelPanel.tsx` — One-Task Mode with built-in focus timer (15/25/45 min presets)
   - `src/hooks/use-session.ts` — localStorage session UUID management
   - `src/hooks/use-weather-sync.ts` — Geolocation + weather sync
 

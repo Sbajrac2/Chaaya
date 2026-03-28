@@ -184,6 +184,12 @@ export const GenerateInsightResponse = zod.object({
     .describe(
       "A scientific bio-validation insight about how environmental factors affect the user",
     ),
+  patterns: zod
+    .array(zod.string())
+    .optional()
+    .describe(
+      "Specific behavioral patterns Asha noticed from recent check-ins",
+    ),
 });
 
 /**
