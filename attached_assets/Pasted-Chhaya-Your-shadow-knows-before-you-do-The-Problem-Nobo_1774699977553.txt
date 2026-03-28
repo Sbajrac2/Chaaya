@@ -1,0 +1,168 @@
+Chhaya (छाया)
+"Your shadow knows before you do."
+The Problem Nobody Has Solved
+Every mental health app built in the last decade puts the burden on the student.
+Download the app. Rate your mood. Book the appointment. Ask for help.
+
+But here's the truth:
+
+The students who need help most are the least capable of asking for it at exactly the moment they need it.
+
+Mental health deterioration in college students doesn't happen overnight.
+It erodes — quietly, invisibly — across weeks of compounding pressure.
+Bad sleep stacks on missed classes, stacks on isolation, stacks on cold November weather.
+By the time anyone notices, the window for easy intervention has already closed.
+
+Chhaya is the first app built around that reality.
+
+What Chhaya Does Differently
+Most apps ask: "How do you feel today?"
+
+That question is the problem. When someone is deteriorating, their ability to accurately self-assess their emotional state deteriorates with them. They underreport. They mask. They say fine.
+
+Chhaya doesn't ask how you feel. It watches what you do.
+
+Five behaviorally grounded questions. 60 seconds. Each one chosen for a specific scientific reason.
+
+The Science Behind Every Question
+1. "Did you attend class today?" Signal: Academic behavioral withdrawal
+
+Academic disengagement is one of the earliest and most measurable leading indicators of psychological distress in college students — preceding grade drops by 2–3 weeks and counseling self-referral by 4–6 weeks.
+
+Source: Journal of American College Health (2019); Eisenberg et al., "Mental Health and Academic Success in College" (2009)
+
+The key insight: students stop attending before they stop submitting. Attendance is the canary.
+
+2. "What time did you wake up?" Signal: Circadian rhythm disruption
+
+The human circadian system is regulated by the suprachiasmatic nucleus (SCN) in the hypothalamus — a biological clock sensitive to light and routine. When wake time drifts by more than 90 minutes from a person's baseline, it indicates circadian disruption — which directly impairs the prefrontal cortex's ability to regulate emotion, make decisions, and sustain motivation.
+
+This is called social jet lag — and college students experience it chronically. A wake time shift of 2+ hours sustained over 5+ days is a measurable neurobiological signal, not just a lifestyle observation.
+
+Source: Roenneberg et al., "Social Jetlag and Obesity" (2012); Walker, "Why We Sleep" (2017); American Academy of Sleep Medicine
+
+3. "Did you leave your room today?" Signal: Voluntary behavioral withdrawal / isolation
+
+Voluntary isolation is one of the most robust behavioral predictors of depression onset in young adults. The mechanism is neurobiological: humans are wired for co-regulation — our nervous systems literally calm down in the presence of safe others. When a student stops leaving their room, they lose access to this co-regulation, which accelerates dysregulation.
+
+Critically: isolation and depression create a feedback loop. Low mood causes isolation. Isolation deepens low mood. Tracking this behavior catches the loop early — before the student has language for what they're experiencing.
+
+Source: Cacioppo & Hawkley, "Perceived Social Isolation and Cognition" (2009, Trends in Cognitive Sciences); APA Div. 12 depression behavioral markers
+
+4. "Did you eat a proper meal today?" Signal: Self-neglect / allostatic load
+
+Irregular eating is both a symptom and an amplifier of psychological stress. The gut-brain axis — the bidirectional communication between the enteric nervous system and the central nervous system via the vagus nerve — means that nutritional disruption directly affects mood, anxiety, and cognitive function through serotonin pathways (90% of serotonin is produced in the gut).
+
+Beyond neurochemistry, skipping meals is a behavioral marker of what psychologists call self-neglect — the unconscious deprioritization of one's own basic needs. This behavioral shift often appears before conscious emotional awareness of distress.
+
+Source: Cryan & Dinan, "Mind-altering microorganisms: the gut microbiome" (2012, Nature Reviews Neuroscience); Stunkard & Allison, eating behavior and psychological distress research
+
+5. "How close were you to your real self today?" (1–5) Signal: Emotional labor / performance tax / masking cost
+
+This question measures what psychologists call emotional dissonance — the gap between felt emotion and displayed emotion. Every hour spent performing a version of yourself that doesn't match your internal state costs measurable cognitive and emotional resources.
+
+This is especially critical for college students because:
+
+High-functioning students mask more effectively and are therefore invisible to existing support systems
+The students with the widest performance gap are often the last to self-refer for help
+Sustained high masking is one of the strongest predictors of eventual burnout
+Tracking this gap over time catches the students that every other system misses.
+
+Source: Hochschild, "The Managed Heart" (1983); Grandey, "Emotional regulation in the workplace" (2000, Journal of Occupational Health Psychology); Nolen-Hoeksema depression masking research
+
+What Chhaya Adds Automatically (No Student Input Required)
+Signal	Source	Why It Matters
+Weather + temperature	OpenWeather API	Cold + gray weather correlates with sub-syndromal SAD affecting up to 20% of young adults
+Sunlight hours	Calculated from location	Reduced light = reduced serotonin synthesis via retinal photoreceptors
+Week of semester	Academic calendar model	Week 7 and Week 11 are documented stress peaks across institutions
+Season	System date	Seasonal affective patterns follow predictable annual arcs
+It builds a personal baseline for each student. Then watches for deviation from that baseline — not compared to other students. Compared to their own normal.
+
+🧠 Additional Factors We Could Add — Expert Recommendations
+As a behavioral and neuropsychological expert, here are the factors with the strongest scientific case for inclusion:
+
+Factor 1 — Response Timing (What Time Did You Submit This Check-in?)
+
+The timestamp of the check-in itself is a passive behavioral signal. A student completing their check-in at 2am vs 8pm is a neurobiological data point — it reflects circadian phase, sleep pressure, and behavioral routine integrity without asking a single extra question.
+
+Science: Circadian rhythm research shows behavioral timing is as diagnostically informative as self-reported sleep duration.
+
+Factor 2 — Physical Contact / Touch Deprivation
+
+"Did you have any physical contact with another person today — a hug, handshake, or even a pat on the back?"
+
+This sounds unusual but has robust neuroscientific backing. Human touch releases oxytocin and activates the vagus nerve — both of which directly regulate stress response. Touch deprivation in college students (especially those living alone or far from family) is a documented but massively undertracked stressor.
+
+Source: Field, "Touch deprivation and exercise deficiency in depressed adolescents" (2005); Hertenstein et al., touch and communication research
+
+Factor 3 — Cognitive Friction "Did you find it hard to start tasks today, even simple ones?"
+
+This measures activation energy — the neurological cost of initiating behavior. Elevated activation energy (procrastination, task paralysis, inability to start) is one of the clearest early markers of prefrontal cortex underperformance caused by sleep deprivation, chronic stress, or early depressive episodes.
+
+Students often experience this before they experience sadness. It's the "I can't make myself do anything" feeling that precedes the "I feel terrible" awareness by days.
+
+Source: Barkley, executive function and self-regulation research; depression and anergia literature
+
+Factor 4 — Sunlight Exposure (Actual, Not Calculated) "Did you spend any time in natural daylight today?"
+
+We currently calculate sunlight hours from weather data — but actual exposure matters more than available light. A student can have 10 hours of sunshine outside and spend all of it in a windowless library. Direct retinal light exposure is what drives serotonin synthesis and suppresses melatonin during the day.
+
+One binary question captures something no API can calculate.
+
+Source: Lewy et al., light therapy and circadian rhythm research; NIH seasonal affective disorder studies
+
+Factor 5 — Substance Use Proxy "Did you rely on caffeine or alcohol to get through today?"
+
+Not asking about addiction — asking about coping mechanism dependency as a behavioral signal. Increased caffeine dependency correlates with sleep debt accumulation. Alcohol use in college students spikes during high-stress periods and is both a symptom and an amplifier of distress.
+
+This question catches a behavioral shift that students rarely volunteer but is highly informative.
+
+Source: NIAAA college drinking research; caffeine and sleep debt literature
+
+Factor 6 — Completion Sense "Did you finish at least one thing you intended to do today?"
+
+This measures behavioral momentum — a concept from behavioral activation therapy (one of the most evidence-backed treatments for depression). The inability to complete even small intended tasks is both a symptom of and contributor to low mood. Tracking this catches the "everything feels unfinished" spiral early.
+
+Source: Behavioral Activation Therapy literature; Martell, Addis & Jacobson (2001)
+
+The Insight That Changes Everything
+After 2 weeks, Chhaya generates this:
+
+"Maya — your sleep has dropped 3 hours from where it was in Week 1. You haven't left your room most days this week. The gap between how you show up and how you actually feel has been widening for 9 days. You are in Week 7 — one of the most documented stress peaks of the entire semester. What you are feeling is real, predictable, and temporary. Tonight: close your laptop 30 minutes earlier than usual. Just tonight. That is enough."
+
+Not generic. Not clinical. Specific to this student, this week, this pattern.
+
+And then it does the hard things for them:
+
+✉️ Drafts the professor email they've been avoiding
+🚶 Suggests a walk timed to the weather outside right now
+💬 Pre-writes the counseling center message so they don't have to explain themselves from scratch
+Why This Wins The Hackathon
+1. Deep psychological grounding Every check-in question, every threshold, every insight is backed by published research — AASM sleep studies, APA social withdrawal research, behavioral psychology literature. We never claim more than the science supports.
+
+2. The demo tells itself Judges watch Maya's 6-week story unfold on the dashboard — sleep dropping, wake time shifting, isolation increasing, week 7 arriving — and Chhaya catches it. In real time. Before Maya has told anyone she's struggling.
+
+3. Technically sophisticated
+
+Neo4j knowledge graph connecting behavioral entries to semester weeks, pattern alerts, and action suggestions through typed relationships
+Claude AI generating warm, specific, bounded insights from real behavioral data
+Full stack — React, FastAPI, PostgreSQL-equivalent graph DB, Docker, live weather API
+4. Ethically responsible Chhaya never diagnoses. Never claims clinical authority. Every insight is framed as behavioral observation, not medical advice. The disclaimer is built into the UI — not buried in terms of service.
+
+5. The vision scales Phase 2: An anonymized university dashboard where counselors see campus-wide behavioral trends — not individual data, but "Week 7 of this semester is tracking 34% worse than last year for engineering sophomores." That's public health thinking applied to student mental health. That's infrastructure, not an app.
+
+What We Built In 24 Hours
+Layer	Technology	Status
+Frontend	React + Next.js + Tailwind	✅ Live
+Backend	Python + FastAPI	✅ Live
+Knowledge Graph	Neo4j	✅ Live
+AI Insight Engine	Claude API (Anthropic)	✅ Live
+Weather Context	OpenWeather API	✅ Live
+Infrastructure	Docker Compose	✅ Live
+3 screens. End to end. Real data. Real AI. Real patterns.
+
+The One Sentence
+"Every other app waits for students to ask for help. Chhaya notices before they know they need to."
+
+Chhaya is a behavioral tracking tool, not a medical application. It does not diagnose or treat any condition. If you are struggling, please text HOME to 741741.
+
