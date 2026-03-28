@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { GenerateInsightBody, GenerateExtensionEmailBody } from "@workspace/api-zod";
+import { GenerateInsightBody, GenerateExtensionEmailBody, FocusFunnelBody, GenerateBioValidationBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -20,12 +20,43 @@ router.post("/insights", async (req, res) => {
     const missedClassCount = recentCheckins.filter(c => !c.attendedClass).length;
     const skippedMealsCount = recentCheckins.filter(c => !c.ateWell).length;
 
+    const isolationCount = recentCheckins.filter(c => c.leftRoom === false).length;
+    const noContactCount = recentCheckins.filter(c => c.hadPhysicalContact === false).length;
+    const cognitiveFrictionCount = recentCheckins.filter(c => c.hadCognitiveFriction === true).length;
+    const noSunlightCount = recentCheckins.filter(c => c.hadSunlightExposure === false).length;
+    const substanceCount = recentCheckins.filter(c => c.usedSubstanceCoping === true).length;
+    const incompletionCount = recentCheckins.filter(c => c.completedTask === false).length;
+
+    const wakeTimes = recentCheckins
+      .filter(c => c.wakeTime)
+      .map(c => {
+        const match = c.wakeTime!.match(/^(\d+):(\d+)\s*(AM|PM)?$/i);
+        if (!match) return null;
+        let hours = parseInt(match[1]);
+        const mins = parseInt(match[2]);
+        const ampm = match[3]?.toUpperCase();
+        if (ampm === "PM" && hours < 12) hours += 12;
+        if (ampm === "AM" && hours === 12) hours = 0;
+        return hours + mins / 60;
+      })
+      .filter((t): t is number => t !== null);
+
+    let wakeTimeDrift = 0;
+    if (wakeTimes.length >= 3) {
+      const baselineWake = wakeTimes.slice(-3).reduce((a, b) => a + b, 0) / 3;
+      const recentWake = wakeTimes[0];
+      wakeTimeDrift = Math.abs(recentWake - baselineWake);
+    }
+
     const cognitiveLoadScore = (avgLatency > 800 ? 2 : avgLatency > 500 ? 1 : 0)
       + (avgMasking > 3.5 ? 1 : 0)
-      + (lateNightCount > 2 ? 1 : 0);
+      + (lateNightCount > 2 ? 1 : 0)
+      + (isolationCount > 3 ? 1 : 0)
+      + (cognitiveFrictionCount > 2 ? 1 : 0)
+      + (wakeTimeDrift > 1.5 ? 1 : 0);
 
-    const cognitiveLoad = cognitiveLoadScore >= 3 ? "high" : cognitiveLoadScore >= 1 ? "moderate" : "low";
-    const showLightenLoad = cognitiveLoad === "high" || (cognitiveLoad === "moderate" && missedClassCount > 0);
+    const cognitiveLoad = cognitiveLoadScore >= 4 ? "high" : cognitiveLoadScore >= 2 ? "moderate" : "low";
+    const showLightenLoad = cognitiveLoad === "high" || (cognitiveLoad === "moderate" && (missedClassCount > 0 || isolationCount > 2));
 
     const weatherContext = weatherData
       ? `Weather: ${weatherData.description}, ${weatherData.temperature}°C, ${weatherData.sunlightHours}h of sunlight today, UV index ${weatherData.uvIndex}. ${weatherData.isLowSunlight ? "Very low sunlight — this affects mood and energy significantly." : ""}`
@@ -33,11 +64,11 @@ router.post("/insights", async (req, res) => {
 
     const weekContext = academicWeek ? `Academic week: ${academicWeek}. ${academicWeek >= 7 && academicWeek <= 9 ? "This is midterm season — statistically the hardest stretch of the semester." : academicWeek >= 13 ? "End-of-semester crunch — finals are close." : ""}` : "";
 
-    const systemPrompt = `You are Asha — a warm, non-clinical digital companion for students and professionals facing burnout. 
+    const systemPrompt = `You are Asha — a warm, non-clinical digital companion for students and professionals facing burnout.
 You speak with quiet wisdom, like a trusted friend who deeply understands the pressures of academic and professional life.
 You validate feelings without diagnosing. You normalize difficulty. You never use clinical terms.
 You write short, warm, specific notes — 2-4 sentences max. No bullet points. No headers.
-Reference specific patterns you've noticed (late nights, meals skipped, masking level).
+Reference specific behavioral patterns you've noticed (late nights, meals skipped, masking level, isolation, circadian drift, cognitive friction).
 If the weather has been gray, mention it. If it's a hard week academically, name it.
 End with one simple, gentle permission or encouragement.`;
 
@@ -47,11 +78,18 @@ End with one simple, gentle permission or encouragement.`;
 - Late-night usage: ${lateNightCount} times
 - Missed classes/work: ${missedClassCount} times
 - Skipped meals: ${skippedMealsCount} times
+- Days stayed in room (isolation): ${isolationCount} days
+- Days without physical contact: ${noContactCount} days
+- Days with cognitive friction (couldn't start tasks): ${cognitiveFrictionCount} days
+- Days without sunlight exposure: ${noSunlightCount} days
+- Days using caffeine/alcohol to cope: ${substanceCount} days
+- Days without completing any intended task: ${incompletionCount} days
+- Wake time drift from baseline: ${wakeTimeDrift.toFixed(1)} hours (>1.5h = social jet lag)
 - Average response latency (cognitive load indicator): ${avgLatency.toFixed(0)}ms (baseline ~400ms; higher = more fatigue)
 - ${weatherContext}
 - ${weekContext}
 
-Write a "Note from Asha" — warm, specific, validating. 2-4 sentences.`;
+Write a "Note from Asha" — warm, specific, validating. 2-4 sentences. Reference the most concerning behavioral patterns.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5-mini",
@@ -59,10 +97,10 @@ Write a "Note from Asha" — warm, specific, validating. 2-4 sentences.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      max_completion_tokens: 200,
+      max_completion_tokens: 250,
     });
 
-    const note = completion.choices[0]?.message?.content ?? 
+    const note = completion.choices[0]?.message?.content?.trim() ||
       "The stone feels heavy today. That's okay — you showed up, and that counts.";
 
     let sanctuarySuggestion: string | null = null;
@@ -87,6 +125,81 @@ Write a "Note from Asha" — warm, specific, validating. 2-4 sentences.`;
       cognitiveLoad: "moderate",
       showLightenLoad: false,
       sanctuarySuggestion: null,
+    });
+  }
+});
+
+router.post("/insights/bio-validation", async (req, res) => {
+  try {
+    const body = GenerateBioValidationBody.parse(req.body);
+    const { checkin, weatherData } = body;
+
+    const signals: string[] = [];
+    let factType: "weather" | "circadian" | "isolation" | "nutrition" | "cognitive" | "general" = "general";
+
+    if (weatherData) {
+      if (weatherData.temperature < 5) {
+        signals.push(`It's ${weatherData.temperature}°C outside. Your body is burning extra energy just to maintain core temperature. Your fatigue is biological, not a personal failure.`);
+        factType = "weather";
+      } else if (weatherData.isLowSunlight) {
+        signals.push(`Only ${weatherData.sunlightHours}h of sunlight today. Reduced light means reduced serotonin synthesis via your retinal photoreceptors. Your low energy has a physical cause.`);
+        factType = "weather";
+      } else if (weatherData.barometricPressure < 1000) {
+        signals.push(`Barometric pressure is low today (${weatherData.barometricPressure} hPa). Research shows drops in pressure increase fatigue and headache frequency. Your body is responding to atmospheric changes.`);
+        factType = "weather";
+      }
+    }
+
+    if (checkin.isLateNight) {
+      signals.push("You're checking in late at night. Your prefrontal cortex — the part of your brain that regulates decisions and emotions — runs on sleep. It's already working harder than it should be right now.");
+      factType = "circadian";
+    }
+
+    if (checkin.leftRoom === false) {
+      signals.push("You didn't leave your room today. Your nervous system is wired for co-regulation — it literally calms down in the presence of safe others. Tomorrow, even standing in a doorway for 2 minutes counts.");
+      factType = "isolation";
+    }
+
+    if (checkin.hadCognitiveFriction === true) {
+      signals.push("You found it hard to start tasks today. That's elevated activation energy — a neurological cost, not laziness. Your prefrontal cortex is running on reduced capacity. Start with the smallest possible step.");
+      factType = "cognitive";
+    }
+
+    if (!checkin.ateWell) {
+      signals.push("You skipped a proper meal. 90% of serotonin — the molecule that regulates mood — is produced in your gut. Nutritional disruption directly affects how you feel through the gut-brain axis.");
+      factType = "nutrition";
+    }
+
+    if (checkin.hadPhysicalContact === false) {
+      signals.push("No physical contact today. Human touch releases oxytocin and activates the vagus nerve — both directly regulate your stress response. Even a handshake counts.");
+      factType = "isolation";
+    }
+
+    if (checkin.usedSubstanceCoping === true) {
+      signals.push("You leaned on caffeine or alcohol today. That's your body looking for a chemical lever when its own systems are depleted. Not a flaw — a signal.");
+      factType = "cognitive";
+    }
+
+    if (signals.length === 0) {
+      if (checkin.maskingLevel >= 4) {
+        signals.push("Your masking level is high. Every hour spent performing a version of yourself that doesn't match your internal state costs measurable cognitive and emotional resources. You deserve spaces where you can just be.");
+        factType = "cognitive";
+      } else {
+        signals.push("You checked in today. That act of self-awareness — pausing to notice how you are — is itself a form of self-regulation. Your nervous system registers it even if your mind doesn't.");
+        factType = "general";
+      }
+    }
+
+    const card = signals[0];
+    const xpGained = 10 + (checkin.completedTask ? 5 : 0) + (checkin.hadSunlightExposure ? 5 : 0);
+
+    res.json({ card, xpGained, factType });
+  } catch (err) {
+    req.log.error({ err }, "Failed to generate bio-validation");
+    res.json({
+      card: "You showed up. That's your nervous system choosing awareness over autopilot. +10 Wisdom XP.",
+      xpGained: 10,
+      factType: "general",
     });
   }
 });
@@ -122,7 +235,7 @@ Return ONLY a JSON object with these exact fields:
     });
 
     const content = completion.choices[0]?.message?.content ?? "{}";
-    
+
     let subject = `Extension Request — ${assignmentName ?? "Assignment"}`;
     let emailBody = `Dear ${professorName ?? "Professor"},\n\nI am writing to respectfully request a brief extension on ${assignmentName ?? "the assignment"} for ${courseName ?? "your course"}.\n\nI have been managing some personal challenges this week and want to ensure I submit work that reflects my genuine effort.\n\nWould a 24-hour extension be possible? I am committed to completing this and appreciate your understanding.\n\nThank you,\n${studentName ?? "Student"}`;
 
@@ -132,7 +245,6 @@ Return ONLY a JSON object with these exact fields:
       subject = parsed.subject ?? subject;
       emailBody = parsed.body ?? emailBody;
     } catch {
-      // Use defaults
     }
 
     const to = professorName ? encodeURIComponent(`${professorName}`) : "";
@@ -147,13 +259,8 @@ Return ONLY a JSON object with these exact fields:
 
 router.post("/insights/focus", async (req, res) => {
   try {
-    const { tasks, weatherDescription, uvIndex, sunlightHours } = req.body as {
-      tasks: string[];
-      weatherDescription?: string;
-      uvIndex?: number;
-      sunlightHours?: number;
-      sessionId?: string;
-    };
+    const body = FocusFunnelBody.parse(req.body);
+    const { tasks, weatherDescription, uvIndex, sunlightHours } = body;
 
     if (!tasks || tasks.length === 0) {
       return res.status(400).json({ error: "No tasks provided" });
@@ -164,7 +271,7 @@ router.post("/insights/focus", async (req, res) => {
       : "No weather data.";
 
     const prompt = `You are Asha, a cognitive support companion. A student has ${tasks.length} task(s) they need to complete:
-${tasks.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+${tasks.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}
 
 Environmental context: ${weatherContext}
 

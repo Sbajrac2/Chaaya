@@ -13,6 +13,13 @@ export const checkinsTable = pgTable("checkins", {
   isLateNight: boolean("is_late_night").notNull().default(false),
   lat: real("lat"),
   lon: real("lon"),
+  wakeTime: text("wake_time"),
+  leftRoom: boolean("left_room"),
+  hadPhysicalContact: boolean("had_physical_contact"),
+  hadCognitiveFriction: boolean("had_cognitive_friction"),
+  hadSunlightExposure: boolean("had_sunlight_exposure"),
+  usedSubstanceCoping: boolean("used_substance_coping"),
+  completedTask: boolean("completed_task"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -24,6 +24,20 @@ export interface CreateCheckinRequest {
   interactionLatencyMs: number;
   lat?: number | null;
   lon?: number | null;
+  /** What time the user woke up today (e.g. "7:30 AM") */
+  wakeTime?: string | null;
+  /** Whether the user left their room today */
+  leftRoom?: boolean | null;
+  /** Whether the user had physical contact with another person today */
+  hadPhysicalContact?: boolean | null;
+  /** Whether the user found it hard to start tasks today */
+  hadCognitiveFriction?: boolean | null;
+  /** Whether the user spent time in natural daylight today */
+  hadSunlightExposure?: boolean | null;
+  /** Whether the user relied on caffeine or alcohol to cope today */
+  usedSubstanceCoping?: boolean | null;
+  /** Whether the user finished at least one intended task today */
+  completedTask?: boolean | null;
 }
 
 export interface Checkin {
@@ -37,6 +51,13 @@ export interface Checkin {
   isLateNight: boolean;
   lat?: number | null;
   lon?: number | null;
+  wakeTime?: string | null;
+  leftRoom?: boolean | null;
+  hadPhysicalContact?: boolean | null;
+  hadCognitiveFriction?: boolean | null;
+  hadSunlightExposure?: boolean | null;
+  usedSubstanceCoping?: boolean | null;
+  completedTask?: boolean | null;
   createdAt: string;
 }
 
@@ -77,6 +98,8 @@ export interface InsightResponse {
   cognitiveLoad: InsightResponseCognitiveLoad;
   showLightenLoad: boolean;
   sanctuarySuggestion?: string | null;
+  /** A scientific bio-validation insight about how environmental factors affect the user */
+  bioValidation?: string | null;
 }
 
 export interface ExtensionEmailRequest {
@@ -90,6 +113,45 @@ export interface ExtensionEmailResponse {
   subject: string;
   body: string;
   mailtoLink: string;
+}
+
+export interface FocusFunnelRequest {
+  sessionId: string;
+  tasks: string[];
+  weatherDescription?: string | null;
+  uvIndex?: number | null;
+  sunlightHours?: number | null;
+}
+
+export interface FocusFunnelResponse {
+  task: string;
+  reason: string;
+}
+
+export interface BioValidationRequest {
+  sessionId: string;
+  weatherData?: WeatherData;
+  checkin: Checkin;
+}
+
+export type BioValidationResponseFactType =
+  (typeof BioValidationResponseFactType)[keyof typeof BioValidationResponseFactType];
+
+export const BioValidationResponseFactType = {
+  weather: "weather",
+  circadian: "circadian",
+  isolation: "isolation",
+  nutrition: "nutrition",
+  cognitive: "cognitive",
+  general: "general",
+} as const;
+
+export interface BioValidationResponse {
+  /** A specific bio-validation insight about how weather/environment is affecting this student */
+  card: string;
+  /** Wisdom XP points earned */
+  xpGained: number;
+  factType: BioValidationResponseFactType;
 }
 
 export interface CommunityPulse {

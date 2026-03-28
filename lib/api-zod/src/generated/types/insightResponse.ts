@@ -12,4 +12,6 @@ export interface InsightResponse {
   cognitiveLoad: InsightResponseCognitiveLoad;
   showLightenLoad: boolean;
   sanctuarySuggestion?: string | null;
+  /** A scientific bio-validation insight about how environmental factors affect the user */
+  bioValidation?: string | null;
 }

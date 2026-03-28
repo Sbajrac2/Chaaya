@@ -6,11 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./bioValidationRequest";
+export * from "./bioValidationResponse";
+export * from "./bioValidationResponseFactType";
 export * from "./checkin";
 export * from "./communityPulse";
 export * from "./createCheckinRequest";
 export * from "./extensionEmailRequest";
 export * from "./extensionEmailResponse";
+export * from "./focusFunnelRequest";
+export * from "./focusFunnelResponse";
 export * from "./gardenData";
 export * from "./getCheckinsParams";
 export * from "./getGardenParams";

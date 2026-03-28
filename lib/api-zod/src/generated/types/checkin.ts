@@ -17,5 +17,12 @@ export interface Checkin {
   isLateNight: boolean;
   lat?: number | null;
   lon?: number | null;
+  wakeTime?: string | null;
+  leftRoom?: boolean | null;
+  hadPhysicalContact?: boolean | null;
+  hadCognitiveFriction?: boolean | null;
+  hadSunlightExposure?: boolean | null;
+  usedSubstanceCoping?: boolean | null;
+  completedTask?: boolean | null;
   createdAt: Date;
 }

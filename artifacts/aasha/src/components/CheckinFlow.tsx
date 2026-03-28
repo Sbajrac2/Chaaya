@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, UtensilsCrossed, Utensils, Loader2 } from "lucide-react";
-import { useCreateCheckin, useGenerateInsight, useGetCheckins } from "@workspace/api-client-react";
+import {
+  Check, X, Utensils, UtensilsCrossed, Loader2,
+  Sun, Moon, Coffee, HandHeart, BrainCog, DoorOpen, DoorClosed,
+  SunMedium, CloudOff, ListChecks, ListX, Clock
+} from "lucide-react";
+import { useCreateCheckin, useGenerateBioValidation } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useWeatherSync } from "@/hooks/use-weather-sync";
 import { cn } from "@/lib/utils";
 
 interface CheckinFlowProps {
@@ -14,10 +19,20 @@ interface CheckinFlowProps {
   onComplete: (bioNote?: string) => void;
 }
 
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | "submitting" | "bio" | "done";
+
+const TOTAL_STEPS = 10;
+const WAKE_OPTIONS = [
+  { label: "Before 7", value: "6:30 AM", icon: <Moon size={22} strokeWidth={1.5} /> },
+  { label: "7 – 9", value: "8:00 AM", icon: <SunMedium size={22} strokeWidth={1.5} /> },
+  { label: "9 – 11", value: "10:00 AM", icon: <Sun size={22} strokeWidth={1.5} /> },
+  { label: "After 11", value: "11:30 AM", icon: <Clock size={22} strokeWidth={1.5} /> },
+];
+
 const fadeVariants = {
   initial: { opacity: 0, scale: 0.92, filter: "blur(12px)" },
-  animate: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.5 } },
-  exit: { opacity: 0, scale: 1.05, filter: "blur(12px)", transition: { duration: 0.4 } },
+  animate: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.4 } },
+  exit: { opacity: 0, scale: 1.05, filter: "blur(12px)", transition: { duration: 0.3 } },
 };
 
 export function CheckinFlow({
@@ -28,21 +43,32 @@ export function CheckinFlow({
   interactionLatencyMs,
   onComplete,
 }: CheckinFlowProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | "submitting" | "done">(1);
+  const [step, setStep] = useState<Step>(1);
   const [attendedClass, setAttendedClass] = useState(true);
   const [ateWell, setAteWell] = useState(true);
   const [maskingLevel, setMaskingLevel] = useState(3);
-  const [bioNote, setBioNote] = useState<string | null>(null);
+  const [wakeTime, setWakeTime] = useState<string | null>(null);
+  const [leftRoom, setLeftRoom] = useState<boolean | null>(null);
+  const [hadPhysicalContact, setHadPhysicalContact] = useState<boolean | null>(null);
+  const [hadCognitiveFriction, setHadCognitiveFriction] = useState<boolean | null>(null);
+  const [hadSunlightExposure, setHadSunlightExposure] = useState<boolean | null>(null);
+  const [usedSubstanceCoping, setUsedSubstanceCoping] = useState<boolean | null>(null);
+  const [completedTask, setCompletedTask] = useState<boolean | null>(null);
+  const [bioCard, setBioCard] = useState<{ card: string; xpGained: number; factType: string } | null>(null);
 
   const qc = useQueryClient();
   const createCheckin = useCreateCheckin();
-  const generateInsight = useGenerateInsight();
-  const { data: checkins } = useGetCheckins({ sessionId, limit: 10 }, { query: { enabled: false } });
+  const bioValidation = useGenerateBioValidation();
+  const { weather } = useWeatherSync();
+
+  const advance = useCallback((nextStep: Step) => {
+    setTimeout(() => setStep(nextStep), 280);
+  }, []);
 
   const submit = async (finalMasking: number) => {
     setStep("submitting");
     try {
-      await createCheckin.mutateAsync({
+      const result = await createCheckin.mutateAsync({
         data: {
           sessionId,
           attendedClass,
@@ -52,115 +78,203 @@ export function CheckinFlow({
           interactionLatencyMs,
           lat: lat ?? null,
           lon: lon ?? null,
+          wakeTime,
+          leftRoom,
+          hadPhysicalContact,
+          hadCognitiveFriction,
+          hadSunlightExposure,
+          usedSubstanceCoping,
+          completedTask,
         },
       });
 
-      // Invalidate queries so garden and checkins refresh
       qc.invalidateQueries({ queryKey: ["getGarden"] });
       qc.invalidateQueries({ queryKey: ["getCheckins"] });
 
-      // Generate a short bio-validation note
       try {
-        const insight = await generateInsight.mutateAsync({
+        const bio = await bioValidation.mutateAsync({
           data: {
             sessionId,
-            recentCheckins: checkins ?? [],
+            checkin: result,
+            weatherData: weather || {
+              temperature: 20,
+              description: "Unable to load weather",
+              uvIndex: 3,
+              sunlightHours: 6,
+              barometricPressure: 1013,
+              isLowSunlight: false,
+              city: "Your location",
+            },
           },
         });
-        setBioNote(insight.note);
+        setBioCard(bio);
+        setStep("bio");
       } catch {
-        // Non-critical
+        setStep("done");
+        setTimeout(() => onComplete(), 2500);
       }
-
-      setStep("done");
-      setTimeout(() => onComplete(bioNote ?? undefined), 3500);
     } catch {
       onComplete();
     }
   };
 
-  const pickClass = (val: boolean) => {
-    setAttendedClass(val);
-    setTimeout(() => setStep(2), 300);
-  };
-
-  const pickFood = (val: boolean) => {
-    setAteWell(val);
-    setTimeout(() => setStep(3), 300);
-  };
-
-  const confirmMasking = () => submit(maskingLevel);
+  const currentStepNum = typeof step === "number" ? step : TOTAL_STEPS;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-2xl">
+      {typeof step === "number" && (
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <motion.div
+              key={i}
+              className={cn(
+                "h-1 rounded-full transition-all duration-300",
+                i < currentStepNum ? "bg-violet-500/70 w-6" : "bg-white/10 w-3"
+              )}
+              layout
+            />
+          ))}
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
-        {/* Step 1: Attended class/work */}
         {step === 1 && (
-          <motion.div key="step1" {...fadeVariants} className="flex flex-col items-center gap-16">
-            {/* Icon: graduation cap / briefcase */}
-            <div className="flex flex-col items-center gap-4 text-white/40">
-              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                <path d="M28 8L6 20l22 12 22-12L28 8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="currentColor" fillOpacity="0.1"/>
-                <path d="M6 20v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M17 26.5v8a11 11 0 0022 0v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Today</p>
-            </div>
-
-            <div className="flex gap-8">
-              <ChoiceButton
-                label={<X size={40} strokeWidth={1.5} />}
-                accent="muted"
-                onClick={() => pickClass(false)}
-              />
-              <ChoiceButton
-                label={<Check size={40} strokeWidth={2} />}
-                accent="primary"
-                onClick={() => pickClass(true)}
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 2: Ate well */}
-        {step === 2 && (
-          <motion.div key="step2" {...fadeVariants} className="flex flex-col items-center gap-16">
-            <div className="flex flex-col items-center gap-4 text-white/40">
-              <Utensils size={52} strokeWidth={1} />
-              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Nourished</p>
-            </div>
-
-            <div className="flex gap-8">
-              <ChoiceButton
-                label={<UtensilsCrossed size={36} strokeWidth={1.5} />}
-                accent="muted"
-                onClick={() => pickFood(false)}
-              />
-              <ChoiceButton
-                label={<Utensils size={36} strokeWidth={2} />}
-                accent="accent"
-                onClick={() => pickFood(true)}
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 3: Masking level slider */}
-        {step === 3 && (
-          <motion.div key="step3" {...fadeVariants} className="flex flex-col items-center gap-12 w-full max-w-xs px-8">
-            <div className="flex flex-col items-center gap-4 text-white/40">
-              {/* Mask icon */}
+          <BinaryStep
+            key="class"
+            icon={
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                <path d="M26 8L6 20l20 11 20-11L26 8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="currentColor" fillOpacity="0.1"/>
+                <path d="M6 20v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M16 26v7a10 10 0 0020 0v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+            label="Showed up today?"
+            yesIcon={<Check size={36} strokeWidth={2} />}
+            noIcon={<X size={36} strokeWidth={1.5} />}
+            onYes={() => { setAttendedClass(true); advance(2); }}
+            onNo={() => { setAttendedClass(false); advance(2); }}
+          />
+        )}
+
+        {step === 2 && (
+          <motion.div key="wake" {...fadeVariants} className="flex flex-col items-center gap-10">
+            <div className="flex flex-col items-center gap-3 text-white/40">
+              <Clock size={44} strokeWidth={1} />
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Wake time</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 w-full max-w-xs px-4">
+              {WAKE_OPTIONS.map((opt) => (
+                <motion.button
+                  key={opt.label}
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => { setWakeTime(opt.value); advance(3); }}
+                  className="flex flex-col items-center gap-2 px-4 py-4 rounded-2xl border border-white/15 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 transition-all"
+                >
+                  {opt.icon}
+                  <span className="text-[10px] font-display tracking-widest uppercase">{opt.label}</span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <BinaryStep
+            key="room"
+            icon={<DoorOpen size={48} strokeWidth={1} />}
+            label="Left your room?"
+            yesIcon={<DoorOpen size={32} strokeWidth={2} />}
+            noIcon={<DoorClosed size={32} strokeWidth={1.5} />}
+            onYes={() => { setLeftRoom(true); advance(4); }}
+            onNo={() => { setLeftRoom(false); advance(4); }}
+          />
+        )}
+
+        {step === 4 && (
+          <BinaryStep
+            key="food"
+            icon={<Utensils size={48} strokeWidth={1} />}
+            label="Nourished?"
+            yesIcon={<Utensils size={32} strokeWidth={2} />}
+            noIcon={<UtensilsCrossed size={32} strokeWidth={1.5} />}
+            onYes={() => { setAteWell(true); advance(5); }}
+            onNo={() => { setAteWell(false); advance(5); }}
+          />
+        )}
+
+        {step === 5 && (
+          <BinaryStep
+            key="sunlight"
+            icon={<Sun size={48} strokeWidth={1} />}
+            label="Daylight today?"
+            yesIcon={<SunMedium size={32} strokeWidth={2} />}
+            noIcon={<CloudOff size={32} strokeWidth={1.5} />}
+            onYes={() => { setHadSunlightExposure(true); advance(6); }}
+            onNo={() => { setHadSunlightExposure(false); advance(6); }}
+          />
+        )}
+
+        {step === 6 && (
+          <BinaryStep
+            key="contact"
+            icon={<HandHeart size={48} strokeWidth={1} />}
+            label="Human touch?"
+            yesIcon={<Check size={32} strokeWidth={2} />}
+            noIcon={<X size={32} strokeWidth={1.5} />}
+            onYes={() => { setHadPhysicalContact(true); advance(7); }}
+            onNo={() => { setHadPhysicalContact(false); advance(7); }}
+          />
+        )}
+
+        {step === 7 && (
+          <BinaryStep
+            key="friction"
+            icon={<BrainCog size={48} strokeWidth={1} />}
+            label="Hard to start things?"
+            yesIcon={<Check size={32} strokeWidth={2} />}
+            noIcon={<X size={32} strokeWidth={1.5} />}
+            onYes={() => { setHadCognitiveFriction(true); advance(8); }}
+            onNo={() => { setHadCognitiveFriction(false); advance(8); }}
+          />
+        )}
+
+        {step === 8 && (
+          <BinaryStep
+            key="substance"
+            icon={<Coffee size={48} strokeWidth={1} />}
+            label="Needed caffeine or alcohol?"
+            yesIcon={<Check size={32} strokeWidth={2} />}
+            noIcon={<X size={32} strokeWidth={1.5} />}
+            onYes={() => { setUsedSubstanceCoping(true); advance(9); }}
+            onNo={() => { setUsedSubstanceCoping(false); advance(9); }}
+          />
+        )}
+
+        {step === 9 && (
+          <BinaryStep
+            key="task"
+            icon={<ListChecks size={48} strokeWidth={1} />}
+            label="Finished something?"
+            yesIcon={<ListChecks size={32} strokeWidth={2} />}
+            noIcon={<ListX size={32} strokeWidth={1.5} />}
+            onYes={() => { setCompletedTask(true); advance(10); }}
+            onNo={() => { setCompletedTask(false); advance(10); }}
+          />
+        )}
+
+        {step === 10 && (
+          <motion.div key="masking" {...fadeVariants} className="flex flex-col items-center gap-10 w-full max-w-xs px-8">
+            <div className="flex flex-col items-center gap-3 text-white/40">
+              <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
                 <ellipse cx="26" cy="30" rx="18" ry="12" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.08"/>
                 <circle cx="18" cy="26" r="3" stroke="currentColor" strokeWidth="1.5"/>
                 <circle cx="34" cy="26" r="3" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M20 35 Q26 39 32 35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">How real are you feeling?</p>
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">How real today?</p>
             </div>
 
-            {/* Slider */}
-            <div className="w-full space-y-6">
+            <div className="w-full space-y-5">
               <div className="relative">
                 <div className="h-2 rounded-full bg-gradient-to-r from-emerald-500/60 via-violet-500/60 to-fuchsia-700/60 mb-2" />
                 <input
@@ -171,7 +285,6 @@ export function CheckinFlow({
                   className="w-full absolute top-0 opacity-0 h-8 cursor-pointer"
                   style={{ margin: "-12px 0" }}
                 />
-                {/* Visual thumb indicator */}
                 <div
                   className="w-7 h-7 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.4)] absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none transition-all duration-150"
                   style={{ left: `${((maskingLevel - 1) / 4) * 100}%` }}
@@ -183,7 +296,6 @@ export function CheckinFlow({
               </div>
             </div>
 
-            {/* Big dot indicators */}
             <div className="flex gap-3">
               {[1, 2, 3, 4, 5].map((v) => (
                 <button
@@ -200,15 +312,14 @@ export function CheckinFlow({
             </div>
 
             <button
-              onClick={confirmMasking}
-              className="mt-4 px-10 py-3.5 rounded-full bg-white/10 border border-white/20 text-white font-display text-sm tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all"
+              onClick={() => submit(maskingLevel)}
+              className="mt-2 px-10 py-3.5 rounded-full bg-white/10 border border-white/20 text-white font-display text-sm tracking-widest uppercase hover:bg-white/20 active:scale-95 transition-all"
             >
               Done
             </button>
           </motion.div>
         )}
 
-        {/* Submitting */}
         {step === "submitting" && (
           <motion.div key="submitting" {...fadeVariants} className="flex flex-col items-center gap-6">
             <Loader2 className="w-8 h-8 text-accent animate-spin" />
@@ -216,10 +327,44 @@ export function CheckinFlow({
           </motion.div>
         )}
 
-        {/* Done: bio-validation */}
+        {step === "bio" && bioCard && (
+          <motion.div
+            key="bio"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center gap-8 px-8 max-w-sm text-center"
+          >
+            <FactTypeIcon factType={bioCard.factType} />
+
+            <div className="space-y-4">
+              <p className="text-base font-sans font-light text-white/85 leading-relaxed">
+                {bioCard.card}
+              </p>
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.6, type: "spring" }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/15 border border-violet-500/20"
+              >
+                <span className="text-xs font-display tracking-widest text-violet-300 uppercase">
+                  +{bioCard.xpGained} Wisdom XP
+                </span>
+              </motion.div>
+            </div>
+
+            <button
+              onClick={() => onComplete()}
+              className="mt-2 px-8 py-3 rounded-full bg-white/8 border border-white/15 text-white/60 font-display text-xs tracking-widest uppercase hover:bg-white/15 active:scale-95 transition-all"
+            >
+              Continue
+            </button>
+          </motion.div>
+        )}
+
         {step === "done" && (
           <motion.div key="done" {...fadeVariants} className="flex flex-col items-center gap-8 px-10 max-w-sm text-center">
-            {/* Petal burst */}
             <div className="relative w-20 h-20 flex items-center justify-center">
               {Array.from({ length: 8 }).map((_, i) => (
                 <motion.div
@@ -233,10 +378,9 @@ export function CheckinFlow({
               ))}
               <div className="w-5 h-5 rounded-full bg-accent z-10 shadow-[0_0_20px_hsl(var(--accent))]" />
             </div>
-
             <div className="space-y-3">
               <p className="text-lg font-sans font-light text-white/90 leading-relaxed">
-                {bioNote ?? "Petal recorded. One more bloom."}
+                Petal recorded. One more bloom.
               </p>
               <p className="text-xs font-display tracking-[0.25em] text-white/30 uppercase">+1 Petal</p>
             </div>
@@ -247,31 +391,67 @@ export function CheckinFlow({
   );
 }
 
-function ChoiceButton({
+function BinaryStep({
+  icon,
   label,
-  accent,
-  onClick,
+  yesIcon,
+  noIcon,
+  onYes,
+  onNo,
 }: {
-  label: React.ReactNode;
-  accent: "primary" | "accent" | "muted";
-  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  yesIcon: React.ReactNode;
+  noIcon: React.ReactNode;
+  onYes: () => void;
+  onNo: () => void;
 }) {
-  const colors = {
-    primary: "border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)]",
-    accent: "border-teal-500/40 bg-teal-500/10 text-teal-300 hover:bg-teal-500/25 shadow-[0_0_30px_-5px_rgba(20,184,166,0.3)]",
-    muted: "border-white/15 bg-white/5 text-white/40 hover:bg-white/10",
+  return (
+    <motion.div {...fadeVariants} className="flex flex-col items-center gap-14">
+      <div className="flex flex-col items-center gap-3 text-white/40">
+        {icon}
+        <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">{label}</p>
+      </div>
+      <div className="flex gap-8">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onNo}
+          className="w-22 h-22 rounded-full border border-white/15 bg-white/5 text-white/40 hover:bg-white/10 flex items-center justify-center transition-all duration-200"
+          style={{ width: 88, height: 88 }}
+        >
+          {noIcon}
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onYes}
+          className="w-22 h-22 rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] flex items-center justify-center transition-all duration-200"
+          style={{ width: 88, height: 88 }}
+        >
+          {yesIcon}
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
+function FactTypeIcon({ factType }: { factType: string }) {
+  const iconMap: Record<string, React.ReactNode> = {
+    weather: <Sun size={32} className="text-amber-400" />,
+    circadian: <Moon size={32} className="text-indigo-400" />,
+    isolation: <HandHeart size={32} className="text-teal-400" />,
+    nutrition: <Utensils size={32} className="text-emerald-400" />,
+    cognitive: <BrainCog size={32} className="text-violet-400" />,
+    general: <Check size={32} className="text-white/50" />,
   };
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      onClick={onClick}
-      className={cn(
-        "w-24 h-24 rounded-full border flex items-center justify-center transition-all duration-200",
-        colors[accent]
-      )}
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", damping: 12 }}
+      className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
     >
-      {label}
-    </motion.button>
+      {iconMap[factType] || iconMap.general}
+    </motion.div>
   );
 }

@@ -17,11 +17,15 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BioValidationRequest,
+  BioValidationResponse,
   Checkin,
   CommunityPulse,
   CreateCheckinRequest,
   ExtensionEmailRequest,
   ExtensionEmailResponse,
+  FocusFunnelRequest,
+  FocusFunnelResponse,
   GardenData,
   GetCheckinsParams,
   GetGardenParams,
@@ -561,6 +565,178 @@ export const useGenerateExtensionEmail = <
   TContext
 > => {
   return useMutation(getGenerateExtensionEmailMutationOptions(options));
+};
+
+/**
+ * @summary Pick one task matched to current energy and weather
+ */
+export const getFocusFunnelUrl = () => {
+  return `/api/insights/focus`;
+};
+
+export const focusFunnel = async (
+  focusFunnelRequest: FocusFunnelRequest,
+  options?: RequestInit,
+): Promise<FocusFunnelResponse> => {
+  return customFetch<FocusFunnelResponse>(getFocusFunnelUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(focusFunnelRequest),
+  });
+};
+
+export const getFocusFunnelMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof focusFunnel>>,
+    TError,
+    { data: BodyType<FocusFunnelRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof focusFunnel>>,
+  TError,
+  { data: BodyType<FocusFunnelRequest> },
+  TContext
+> => {
+  const mutationKey = ["focusFunnel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof focusFunnel>>,
+    { data: BodyType<FocusFunnelRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return focusFunnel(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FocusFunnelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof focusFunnel>>
+>;
+export type FocusFunnelMutationBody = BodyType<FocusFunnelRequest>;
+export type FocusFunnelMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Pick one task matched to current energy and weather
+ */
+export const useFocusFunnel = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof focusFunnel>>,
+    TError,
+    { data: BodyType<FocusFunnelRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof focusFunnel>>,
+  TError,
+  { data: BodyType<FocusFunnelRequest> },
+  TContext
+> => {
+  return useMutation(getFocusFunnelMutationOptions(options));
+};
+
+/**
+ * @summary Generate a bio-validation card after check-in
+ */
+export const getGenerateBioValidationUrl = () => {
+  return `/api/insights/bio-validation`;
+};
+
+export const generateBioValidation = async (
+  bioValidationRequest: BioValidationRequest,
+  options?: RequestInit,
+): Promise<BioValidationResponse> => {
+  return customFetch<BioValidationResponse>(getGenerateBioValidationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bioValidationRequest),
+  });
+};
+
+export const getGenerateBioValidationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateBioValidation>>,
+    TError,
+    { data: BodyType<BioValidationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateBioValidation>>,
+  TError,
+  { data: BodyType<BioValidationRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateBioValidation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateBioValidation>>,
+    { data: BodyType<BioValidationRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateBioValidation(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateBioValidationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateBioValidation>>
+>;
+export type GenerateBioValidationMutationBody = BodyType<BioValidationRequest>;
+export type GenerateBioValidationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a bio-validation card after check-in
+ */
+export const useGenerateBioValidation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateBioValidation>>,
+    TError,
+    { data: BodyType<BioValidationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateBioValidation>>,
+  TError,
+  { data: BodyType<BioValidationRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateBioValidationMutationOptions(options));
 };
 
 /**

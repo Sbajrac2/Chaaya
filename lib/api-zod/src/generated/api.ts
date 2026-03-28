@@ -34,6 +34,36 @@ export const CreateCheckinBody = zod.object({
     ),
   lat: zod.number().nullish(),
   lon: zod.number().nullish(),
+  wakeTime: zod
+    .string()
+    .nullish()
+    .describe('What time the user woke up today (e.g. \"7:30 AM\")'),
+  leftRoom: zod
+    .boolean()
+    .nullish()
+    .describe("Whether the user left their room today"),
+  hadPhysicalContact: zod
+    .boolean()
+    .nullish()
+    .describe(
+      "Whether the user had physical contact with another person today",
+    ),
+  hadCognitiveFriction: zod
+    .boolean()
+    .nullish()
+    .describe("Whether the user found it hard to start tasks today"),
+  hadSunlightExposure: zod
+    .boolean()
+    .nullish()
+    .describe("Whether the user spent time in natural daylight today"),
+  usedSubstanceCoping: zod
+    .boolean()
+    .nullish()
+    .describe("Whether the user relied on caffeine or alcohol to cope today"),
+  completedTask: zod
+    .boolean()
+    .nullish()
+    .describe("Whether the user finished at least one intended task today"),
 });
 
 /**
@@ -57,6 +87,13 @@ export const GetCheckinsResponseItem = zod.object({
   isLateNight: zod.boolean(),
   lat: zod.number().nullish(),
   lon: zod.number().nullish(),
+  wakeTime: zod.string().nullish(),
+  leftRoom: zod.boolean().nullish(),
+  hadPhysicalContact: zod.boolean().nullish(),
+  hadCognitiveFriction: zod.boolean().nullish(),
+  hadSunlightExposure: zod.boolean().nullish(),
+  usedSubstanceCoping: zod.boolean().nullish(),
+  completedTask: zod.boolean().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const GetCheckinsResponse = zod.array(GetCheckinsResponseItem);
@@ -82,6 +119,13 @@ export const GetGardenResponse = zod.object({
       isLateNight: zod.boolean(),
       lat: zod.number().nullish(),
       lon: zod.number().nullish(),
+      wakeTime: zod.string().nullish(),
+      leftRoom: zod.boolean().nullish(),
+      hadPhysicalContact: zod.boolean().nullish(),
+      hadCognitiveFriction: zod.boolean().nullish(),
+      hadSunlightExposure: zod.boolean().nullish(),
+      usedSubstanceCoping: zod.boolean().nullish(),
+      completedTask: zod.boolean().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -116,6 +160,13 @@ export const GenerateInsightBody = zod.object({
       isLateNight: zod.boolean(),
       lat: zod.number().nullish(),
       lon: zod.number().nullish(),
+      wakeTime: zod.string().nullish(),
+      leftRoom: zod.boolean().nullish(),
+      hadPhysicalContact: zod.boolean().nullish(),
+      hadCognitiveFriction: zod.boolean().nullish(),
+      hadSunlightExposure: zod.boolean().nullish(),
+      usedSubstanceCoping: zod.boolean().nullish(),
+      completedTask: zod.boolean().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -127,6 +178,12 @@ export const GenerateInsightResponse = zod.object({
   cognitiveLoad: zod.enum(["low", "moderate", "high"]),
   showLightenLoad: zod.boolean(),
   sanctuarySuggestion: zod.string().nullish(),
+  bioValidation: zod
+    .string()
+    .nullish()
+    .describe(
+      "A scientific bio-validation insight about how environmental factors affect the user",
+    ),
 });
 
 /**
@@ -143,6 +200,77 @@ export const GenerateExtensionEmailResponse = zod.object({
   subject: zod.string(),
   body: zod.string(),
   mailtoLink: zod.string(),
+});
+
+/**
+ * @summary Pick one task matched to current energy and weather
+ */
+export const FocusFunnelBody = zod.object({
+  sessionId: zod.string(),
+  tasks: zod.array(zod.string()),
+  weatherDescription: zod.string().nullish(),
+  uvIndex: zod.number().nullish(),
+  sunlightHours: zod.number().nullish(),
+});
+
+export const FocusFunnelResponse = zod.object({
+  task: zod.string(),
+  reason: zod.string(),
+});
+
+/**
+ * @summary Generate a bio-validation card after check-in
+ */
+export const GenerateBioValidationBody = zod.object({
+  sessionId: zod.string(),
+  weatherData: zod
+    .object({
+      temperature: zod.number(),
+      description: zod.string(),
+      uvIndex: zod.number(),
+      sunlightHours: zod.number(),
+      barometricPressure: zod.number(),
+      isLowSunlight: zod.boolean(),
+      city: zod.string(),
+    })
+    .optional(),
+  checkin: zod.object({
+    id: zod.number(),
+    sessionId: zod.string(),
+    attendedClass: zod.boolean(),
+    ateWell: zod.boolean(),
+    maskingLevel: zod.number(),
+    holdDurationMs: zod.number(),
+    interactionLatencyMs: zod.number(),
+    isLateNight: zod.boolean(),
+    lat: zod.number().nullish(),
+    lon: zod.number().nullish(),
+    wakeTime: zod.string().nullish(),
+    leftRoom: zod.boolean().nullish(),
+    hadPhysicalContact: zod.boolean().nullish(),
+    hadCognitiveFriction: zod.boolean().nullish(),
+    hadSunlightExposure: zod.boolean().nullish(),
+    usedSubstanceCoping: zod.boolean().nullish(),
+    completedTask: zod.boolean().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+});
+
+export const GenerateBioValidationResponse = zod.object({
+  card: zod
+    .string()
+    .describe(
+      "A specific bio-validation insight about how weather\/environment is affecting this student",
+    ),
+  xpGained: zod.number().describe("Wisdom XP points earned"),
+  factType: zod.enum([
+    "weather",
+    "circadian",
+    "isolation",
+    "nutrition",
+    "cognitive",
+    "general",
+  ]),
 });
 
 /**

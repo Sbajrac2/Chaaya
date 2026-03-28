@@ -131,6 +131,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExtensionEmailResponse"
 
+  /insights/focus:
+    post:
+      operationId: focusFunnel
+      tags: [insights]
+      summary: Pick one task matched to current energy and weather
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FocusFunnelRequest"
+      responses:
+        "200":
+          description: Selected task with reasoning
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusFunnelResponse"
+
+  /insights/bio-validation:
+    post:
+      operationId: generateBioValidation
+      tags: [insights]
+      summary: Generate a bio-validation card after check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BioValidationRequest"
+      responses:
+        "200":
+          description: Bio-validation insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BioValidationResponse"
+
   /weather:
     get:
       operationId: getWeather
@@ -203,6 +241,34 @@ components:
         lon:
           type: number
           nullable: true
+        wakeTime:
+          type: string
+          nullable: true
+          description: What time the user woke up today (e.g. "7:30 AM")
+        leftRoom:
+          type: boolean
+          nullable: true
+          description: Whether the user left their room today
+        hadPhysicalContact:
+          type: boolean
+          nullable: true
+          description: Whether the user had physical contact with another person today
+        hadCognitiveFriction:
+          type: boolean
+          nullable: true
+          description: Whether the user found it hard to start tasks today
+        hadSunlightExposure:
+          type: boolean
+          nullable: true
+          description: Whether the user spent time in natural daylight today
+        usedSubstanceCoping:
+          type: boolean
+          nullable: true
+          description: Whether the user relied on caffeine or alcohol to cope today
+        completedTask:
+          type: boolean
+          nullable: true
+          description: Whether the user finished at least one intended task today
       required:
         - sessionId
         - attendedClass
@@ -235,6 +301,27 @@ components:
           nullable: true
         lon:
           type: number
+          nullable: true
+        wakeTime:
+          type: string
+          nullable: true
+        leftRoom:
+          type: boolean
+          nullable: true
+        hadPhysicalContact:
+          type: boolean
+          nullable: true
+        hadCognitiveFriction:
+          type: boolean
+          nullable: true
+        hadSunlightExposure:
+          type: boolean
+          nullable: true
+        usedSubstanceCoping:
+          type: boolean
+          nullable: true
+        completedTask:
+          type: boolean
           nullable: true
         createdAt:
           type: string
@@ -297,6 +384,10 @@ components:
         sanctuarySuggestion:
           type: string
           nullable: true
+        bioValidation:
+          type: string
+          nullable: true
+          description: A scientific bio-validation insight about how environmental factors affect the user
       required:
         - note
         - cognitiveLoad
@@ -332,6 +423,69 @@ components:
         - subject
         - body
         - mailtoLink
+
+    FocusFunnelRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        tasks:
+          type: array
+          items:
+            type: string
+        weatherDescription:
+          type: string
+          nullable: true
+        uvIndex:
+          type: number
+          nullable: true
+        sunlightHours:
+          type: number
+          nullable: true
+      required:
+        - sessionId
+        - tasks
+
+    FocusFunnelResponse:
+      type: object
+      properties:
+        task:
+          type: string
+        reason:
+          type: string
+      required:
+        - task
+        - reason
+
+    BioValidationRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        weatherData:
+          $ref: "#/components/schemas/WeatherData"
+        checkin:
+          $ref: "#/components/schemas/Checkin"
+      required:
+        - sessionId
+        - checkin
+
+    BioValidationResponse:
+      type: object
+      properties:
+        card:
+          type: string
+          description: A specific bio-validation insight about how weather/environment is affecting this student
+        xpGained:
+          type: integer
+          description: Wisdom XP points earned
+        factType:
+          type: string
+          enum: [weather, circadian, isolation, nutrition, cognitive, general]
+      required:
+        - card
+        - xpGained
+        - factType
 
     WeatherData:
       type: object

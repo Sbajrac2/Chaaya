@@ -21,4 +21,18 @@ export interface CreateCheckinRequest {
   interactionLatencyMs: number;
   lat?: number | null;
   lon?: number | null;
+  /** What time the user woke up today (e.g. "7:30 AM") */
+  wakeTime?: string | null;
+  /** Whether the user left their room today */
+  leftRoom?: boolean | null;
+  /** Whether the user had physical contact with another person today */
+  hadPhysicalContact?: boolean | null;
+  /** Whether the user found it hard to start tasks today */
+  hadCognitiveFriction?: boolean | null;
+  /** Whether the user spent time in natural daylight today */
+  hadSunlightExposure?: boolean | null;
+  /** Whether the user relied on caffeine or alcohol to cope today */
+  usedSubstanceCoping?: boolean | null;
+  /** Whether the user finished at least one intended task today */
+  completedTask?: boolean | null;
 }

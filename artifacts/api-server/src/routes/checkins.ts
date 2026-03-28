@@ -22,6 +22,13 @@ router.post("/checkins", async (req, res) => {
       isLateNight,
       lat: body.lat ?? null,
       lon: body.lon ?? null,
+      wakeTime: body.wakeTime ?? null,
+      leftRoom: body.leftRoom ?? null,
+      hadPhysicalContact: body.hadPhysicalContact ?? null,
+      hadCognitiveFriction: body.hadCognitiveFriction ?? null,
+      hadSunlightExposure: body.hadSunlightExposure ?? null,
+      usedSubstanceCoping: body.usedSubstanceCoping ?? null,
+      completedTask: body.completedTask ?? null,
     }).returning();
 
     res.status(201).json(checkin);

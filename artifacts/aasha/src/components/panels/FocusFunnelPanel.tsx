@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Target, Loader2, X, ChevronRight } from "lucide-react";
+import { useFocusFunnel } from "@workspace/api-client-react";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
 interface FocusFunnelPanelProps {
@@ -11,8 +12,8 @@ interface FocusFunnelPanelProps {
 export function FocusFunnelPanel({ sessionId, weather }: FocusFunnelPanelProps) {
   const [tasks, setTasks] = useState(["", "", ""]);
   const [result, setResult] = useState<{ task: string; reason: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const focusMutation = useFocusFunnel();
 
   const updateTask = (i: number, val: string) => {
     const t = [...tasks];
@@ -24,27 +25,20 @@ export function FocusFunnelPanel({ sessionId, weather }: FocusFunnelPanelProps) 
 
   const getFocusTask = async () => {
     if (filledTasks.length === 0) return;
-    setIsLoading(true);
     setError(null);
     try {
-      const resp = await fetch("/api/insights/focus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await focusMutation.mutateAsync({
+        data: {
           sessionId,
           tasks: filledTasks,
           weatherDescription: weather?.description,
           uvIndex: weather?.uvIndex,
           sunlightHours: weather?.sunlightHours,
-        }),
+        },
       });
-      if (!resp.ok) throw new Error("Failed");
-      const data = await resp.json();
       setResult(data);
     } catch {
       setError("Couldn't reach Asha. Try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -92,10 +86,10 @@ export function FocusFunnelPanel({ sessionId, weather }: FocusFunnelPanelProps) 
 
             <button
               onClick={getFocusTask}
-              disabled={isLoading || filledTasks.length === 0}
+              disabled={focusMutation.isPending || filledTasks.length === 0}
               className="w-full py-4 rounded-2xl bg-violet-600/60 border border-violet-500/20 text-white font-display text-sm tracking-widest uppercase hover:bg-violet-600/80 active:scale-95 transition-all disabled:opacity-30 flex justify-center items-center gap-2"
             >
-              {isLoading ? (
+              {focusMutation.isPending ? (
                 <><Loader2 size={16} className="animate-spin" /> Reading your energy...</>
               ) : (
                 <>Find my task <ChevronRight size={16} /></>

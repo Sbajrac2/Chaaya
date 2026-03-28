@@ -2,7 +2,7 @@
 
 ## Overview
 
-Aasha is a minimalist mental health & cognitive support app for students and professionals. Built around a "Digital Worry Stone" interaction paradigm — a single glowing orb the user holds to check in. No menus, no nav bars, gesture-only navigation.
+Aasha is a minimalist mental health & cognitive support app for students and professionals. Built around a "Digital Worry Stone" interaction paradigm — a single glowing orb the user holds to check in. No menus, no nav bars, gesture-only navigation. Integrates Chhaya-style behavioral tracking with scientifically grounded bio-validation.
 
 ## Stack
 
@@ -23,12 +23,13 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 ### `artifacts/aasha` — Frontend (React + Vite)
 - Serves at `/` (root)
 - Key components:
-  - `src/components/Orb.tsx` — The glowing worry stone orb with breath animation
-  - `src/components/CheckinFlow.tsx` — 3-step icon-based check-in (class/food/masking)
-  - `src/components/SwipeableView.tsx` — Swipe-up gesture container
-  - `src/components/panels/GardenPanel.tsx` — Resilience garden (petals)
-  - `src/components/panels/NotePanel.tsx` — Asha's AI note + Lighten the Load
-  - `src/components/panels/PulsePanel.tsx` — Anonymous campus stress heatmap
+  - `src/components/Orb.tsx` — The glowing worry stone orb with breath animation + progress ring
+  - `src/components/CheckinFlow.tsx` — 10-step behavioral check-in (class, wake time, left room, nourished, sunlight, human touch, cognitive friction, substance coping, task completion, masking level)
+  - `src/components/InsightsView.tsx` — 4-tab insight panel (Garden/Asha/Pulse/Focus) with swipe + tap navigation
+  - `src/components/panels/GardenPanel.tsx` — Resilience garden (golden-angle phyllotaxis petals)
+  - `src/components/panels/NotePanel.tsx` — Asha's AI note + Lighten the Load (email drafting + sanctuary)
+  - `src/components/panels/PulsePanel.tsx` — Anonymous campus stress heatmap with ring gauge
+  - `src/components/panels/FocusFunnelPanel.tsx` — One-Task Mode (enter 3 tasks, AI picks best for current energy)
   - `src/hooks/use-session.ts` — localStorage session UUID management
   - `src/hooks/use-weather-sync.ts` — Geolocation + weather sync
 
@@ -36,12 +37,14 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 - Serves at `/api`
 - Routes:
   - `GET /api/healthz` — health check
-  - `POST /api/checkins` — submit check-in
+  - `POST /api/checkins` — submit check-in (expanded: 7 new behavioral fields)
   - `GET /api/checkins?sessionId=X` — get check-ins
   - `GET /api/checkins/garden?sessionId=X` — resilience garden data
-  - `POST /api/insights` — AI-generated "Note from Asha"
+  - `POST /api/insights` — AI-generated "Note from Asha" (enhanced behavioral analysis)
   - `POST /api/insights/email` — AI-drafted professor extension email
-  - `GET /api/weather?lat=X&lon=Y` — weather data (requires OPENWEATHER_API_KEY, graceful fallback)
+  - `POST /api/insights/bio-validation` — Bio-validation card with scientific body/weather insight + XP
+  - `POST /api/insights/focus` — Focus Funnel (AI picks best task for energy/weather)
+  - `GET /api/weather?lat=X&lon=Y` — weather data (graceful fallback)
   - `GET /api/pulse` — anonymized community stress pulse
 
 ## Database Schema
@@ -50,7 +53,30 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 - `id`, `session_id`, `attended_class`, `ate_well`, `masking_level` (1-5)
 - `hold_duration_ms`, `interaction_latency_ms` (cognitive load indicators)
 - `is_late_night` (auto-detected from time of submission)
+- `wake_time` — What time user woke up (text, nullable)
+- `left_room` — Whether user left their room (boolean, nullable)
+- `had_physical_contact` — Whether user had physical touch today (boolean, nullable)
+- `had_cognitive_friction` — Whether user found it hard to start tasks (boolean, nullable)
+- `had_sunlight_exposure` — Whether user spent time in natural daylight (boolean, nullable)
+- `used_substance_coping` — Whether user relied on caffeine/alcohol (boolean, nullable)
+- `completed_task` — Whether user finished at least one intended task (boolean, nullable)
 - `lat`, `lon`, `created_at`
+
+## Behavioral Tracking (Chhaya Science)
+
+Each check-in question maps to a published behavioral signal:
+1. **Attended class** — Academic behavioral withdrawal (Eisenberg et al., 2009)
+2. **Wake time** — Circadian rhythm disruption / social jet lag (Roenneberg et al., 2012)
+3. **Left room** — Voluntary isolation, loss of co-regulation (Cacioppo & Hawkley, 2009)
+4. **Ate well** — Gut-brain axis / self-neglect (Cryan & Dinan, 2012)
+5. **Sunlight exposure** — Actual retinal light vs available light (Lewy et al.)
+6. **Physical contact** — Touch deprivation / oxytocin + vagus nerve (Field, 2005)
+7. **Cognitive friction** — Activation energy / prefrontal cortex load (Barkley)
+8. **Substance coping** — Coping mechanism dependency signal (NIAAA research)
+9. **Task completion** — Behavioral momentum (Martell, Addis & Jacobson, 2001)
+10. **Masking level** — Emotional dissonance / performance tax (Hochschild, 1983)
+
+Bio-validation cards cite specific neuroscience after each check-in (weather impact on serotonin, circadian disruption, isolation feedback loops, etc.)
 
 ## Environment Variables
 
@@ -63,11 +89,14 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 ## Key Design Decisions
 
 - **Zero stigma UI**: No clinical forms, no diagnoses. Just a stone, icons, and warmth.
+- **Behavioral over self-report**: Watches what you do, not just what you say. Catches students who mask.
 - **Cognitive load tracking**: Hold duration + micro-movement latency = passive stress signal
+- **Bio-validation**: After check-in, explains HOW environment/behavior physically affects the brain/body
 - **No streaks**: Resilience garden only grows (petals never die). No shame mechanics.
 - **Community validation**: Campus Pulse shows anonymized aggregate data to normalize struggle.
 - **Solar Warmth mode**: Orb shifts amber/gold when sunlight hours < 4 (simulated light therapy)
-- **Gesture-only navigation**: Swipe up to reveal insights. Long press to reset.
+- **Gesture-only navigation**: Swipe up to reveal insights. Long press to reset. Tap tabs.
+- **Wisdom XP**: Each check-in earns XP. Bonus for completing tasks and getting sunlight.
 
 ## Structure
 
