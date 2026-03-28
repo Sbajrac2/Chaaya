@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, X, Utensils, UtensilsCrossed, Loader2,
-  DoorOpen, DoorClosed, Sun, BrainCog, HandHeart
+  DoorOpen, DoorClosed, Sun, BrainCog, HandHeart, SkipForward
 } from "lucide-react";
 import { useCreateCheckin, useGenerateBioValidation } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,6 +42,7 @@ export function CheckinFlow({
   const [leftRoom, setLeftRoom] = useState<boolean | null>(null);
   const [maskingLevel, setMaskingLevel] = useState(3);
   const [bioCard, setBioCard] = useState<{ card: string; xpGained: number; factType: string } | null>(null);
+  const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
   const qc = useQueryClient();
   const createCheckin = useCreateCheckin();
@@ -49,6 +50,7 @@ export function CheckinFlow({
   const { weather } = useWeatherSync();
 
   const advance = useCallback((nextStep: Step) => {
+    setHoveredOption(null);
     setTimeout(() => setStep(nextStep), 280);
   }, []);
 
@@ -101,23 +103,37 @@ export function CheckinFlow({
     }
   };
 
+  const skipAll = () => {
+    submit(maskingLevel);
+  };
+
   const currentStepNum = typeof step === "number" ? step : TOTAL_STEPS;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-2xl">
       {typeof step === "number" && (
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <motion.div
-              key={i}
-              className={cn(
-                "h-1 rounded-full transition-all duration-300",
-                i < currentStepNum ? "bg-violet-500/70 w-8" : "bg-white/10 w-4"
-              )}
-              layout
-            />
-          ))}
-        </div>
+        <>
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <motion.div
+                key={i}
+                className={cn(
+                  "h-1 rounded-full transition-all duration-300",
+                  i < currentStepNum ? "bg-violet-500/70 w-8" : "bg-white/10 w-4"
+                )}
+                layout
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={skipAll}
+            className="absolute top-8 right-6 flex items-center gap-1.5 text-white/25 hover:text-white/50 transition-colors"
+          >
+            <span className="text-[10px] font-display tracking-widest uppercase">Skip</span>
+            <SkipForward size={14} />
+          </button>
+        </>
       )}
 
       <AnimatePresence mode="wait">
@@ -134,8 +150,13 @@ export function CheckinFlow({
             label="Showed up today?"
             yesIcon={<Check size={36} strokeWidth={2} />}
             noIcon={<X size={36} strokeWidth={1.5} />}
+            yesTooltip="I made it to class or showed up for my commitments"
+            noTooltip="Couldn't make it today — maybe academic overwhelm, anxiety about falling behind, transportation issues, or just needing space. Whatever the reason is valid."
             onYes={() => { setAttendedClass(true); advance(2); }}
             onNo={() => { setAttendedClass(false); advance(2); }}
+            onSkip={() => advance(2)}
+            hoveredOption={hoveredOption}
+            setHoveredOption={setHoveredOption}
           />
         )}
 
@@ -146,8 +167,13 @@ export function CheckinFlow({
             label="Nourished?"
             yesIcon={<Utensils size={32} strokeWidth={2} />}
             noIcon={<UtensilsCrossed size={32} strokeWidth={1.5} />}
+            yesTooltip="I ate something today that felt like taking care of myself"
+            noTooltip="Didn't eat well — could be food insecurity, disordered eating patterns, no time between commitments, budget constraints, or simply forgetting. Your body still deserves fuel."
             onYes={() => { setAteWell(true); advance(3); }}
             onNo={() => { setAteWell(false); advance(3); }}
+            onSkip={() => advance(3)}
+            hoveredOption={hoveredOption}
+            setHoveredOption={setHoveredOption}
           />
         )}
 
@@ -158,8 +184,13 @@ export function CheckinFlow({
             label="Left your room?"
             yesIcon={<DoorOpen size={32} strokeWidth={2} />}
             noIcon={<DoorClosed size={32} strokeWidth={1.5} />}
+            yesTooltip="I stepped outside my space today — even briefly"
+            noTooltip="Stayed in all day — could be social withdrawal, low energy, depressive patterns, sensory overwhelm, or a protective cocoon. Isolation is sometimes safety, sometimes a signal."
             onYes={() => { setLeftRoom(true); advance(4); }}
             onNo={() => { setLeftRoom(false); advance(4); }}
+            onSkip={() => advance(4)}
+            hoveredOption={hoveredOption}
+            setHoveredOption={setHoveredOption}
           />
         )}
 
@@ -172,7 +203,10 @@ export function CheckinFlow({
                 <circle cx="34" cy="26" r="3" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M20 35 Q26 39 32 35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">How real today?</p>
+              <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">Were you the real you today?</p>
+              <p className="text-[10px] text-white/20 max-w-[240px] text-center leading-relaxed">
+                The gap between who you are inside and who you showed the world. Masking costs energy — we're measuring that cost.
+              </p>
             </div>
 
             <div className="w-full space-y-5">
@@ -251,12 +285,21 @@ export function CheckinFlow({
                 </span>
               </motion.div>
             </div>
-            <button
-              onClick={() => onComplete()}
-              className="mt-2 px-8 py-3 rounded-full bg-white/8 border border-white/15 text-white/60 font-display text-xs tracking-widest uppercase hover:bg-white/15 active:scale-95 transition-all"
-            >
-              Continue
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => onComplete()}
+                className="px-8 py-3 rounded-full bg-white/8 border border-white/15 text-white/60 font-display text-xs tracking-widest uppercase hover:bg-white/15 active:scale-95 transition-all"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => onComplete()}
+                className="flex items-center gap-1.5 text-white/25 hover:text-white/50 transition-colors"
+              >
+                <span className="text-[10px] font-display tracking-widest uppercase">Skip</span>
+                <SkipForward size={12} />
+              </button>
+            </div>
           </motion.div>
         )}
 
@@ -287,30 +330,69 @@ export function CheckinFlow({
 }
 
 function BinaryStep({
-  icon, label, yesIcon, noIcon, onYes, onNo,
+  icon, label, yesIcon, noIcon, yesTooltip, noTooltip, onYes, onNo, onSkip, hoveredOption, setHoveredOption,
 }: {
   icon: React.ReactNode; label: string;
   yesIcon: React.ReactNode; noIcon: React.ReactNode;
-  onYes: () => void; onNo: () => void;
+  yesTooltip: string; noTooltip: string;
+  onYes: () => void; onNo: () => void; onSkip: () => void;
+  hoveredOption: string | null; setHoveredOption: (v: string | null) => void;
 }) {
   return (
-    <motion.div {...fadeVariants} className="flex flex-col items-center gap-14">
+    <motion.div {...fadeVariants} className="flex flex-col items-center gap-10">
       <div className="flex flex-col items-center gap-3 text-white/40">
         {icon}
         <p className="text-xs font-display tracking-[0.3em] uppercase text-white/30">{label}</p>
       </div>
+
       <div className="flex gap-8">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onNo}
-          className="rounded-full border border-white/15 bg-white/5 text-white/40 hover:bg-white/10 flex items-center justify-center transition-all duration-200"
-          style={{ width: 88, height: 88 }}>
-          {noIcon}
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onYes}
-          className="rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] flex items-center justify-center transition-all duration-200"
-          style={{ width: 88, height: 88 }}>
-          {yesIcon}
-        </motion.button>
+        <div className="flex flex-col items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onYes}
+            onMouseEnter={() => setHoveredOption("yes")}
+            onMouseLeave={() => setHoveredOption(null)}
+            className="rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/25 shadow-[0_0_30px_-5px_rgba(139,92,246,0.3)] flex items-center justify-center transition-all duration-200"
+            style={{ width: 88, height: 88 }}
+          >
+            {yesIcon}
+          </motion.button>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onNo}
+            onMouseEnter={() => setHoveredOption("no")}
+            onMouseLeave={() => setHoveredOption(null)}
+            className="rounded-full border border-white/15 bg-white/5 text-white/40 hover:bg-white/10 flex items-center justify-center transition-all duration-200"
+            style={{ width: 88, height: 88 }}
+          >
+            {noIcon}
+          </motion.button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {hoveredOption && (
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.2 }}
+            className="text-[11px] text-white/35 max-w-[280px] text-center leading-relaxed px-4"
+          >
+            {hoveredOption === "yes" ? yesTooltip : noTooltip}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      <button
+        onClick={onSkip}
+        className="flex items-center gap-1.5 text-white/20 hover:text-white/40 transition-colors mt-2"
+      >
+        <span className="text-[10px] font-display tracking-widest uppercase">Skip this</span>
+        <SkipForward size={12} />
+      </button>
     </motion.div>
   );
 }

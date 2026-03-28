@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface OrbProps {
@@ -7,10 +7,23 @@ interface OrbProps {
   onCheckinTrigger: (durationMs: number, latencyMs: number) => void;
 }
 
+const BREATH_IN = 4000;
+const BREATH_HOLD = 7000;
+const BREATH_OUT = 8000;
+const CYCLE_TOTAL = BREATH_IN + BREATH_HOLD + BREATH_OUT;
+
+function getBreathPhaseLabel(elapsed: number): { label: string; phase: "in" | "hold" | "out" } {
+  const cyclePos = elapsed % CYCLE_TOTAL;
+  if (cyclePos < BREATH_IN) return { label: "Breathe in", phase: "in" };
+  if (cyclePos < BREATH_IN + BREATH_HOLD) return { label: "Hold", phase: "hold" };
+  return { label: "Breathe out", phase: "out" };
+}
+
 export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0);
   const [breathPhase, setBreathPhase] = useState(0);
+  const [breathLabel, setBreathLabel] = useState<{ label: string; phase: "in" | "hold" | "out" }>({ label: "Breathe in", phase: "in" });
 
   const holdStartTime = useRef<number>(0);
   const lastMoveTime = useRef<number>(0);
@@ -19,12 +32,11 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
   const breathFrame = useRef<number>(0);
   const holdActive = useRef(false);
 
-  // Continuous breath animation
   useEffect(() => {
     let start = Date.now();
     const animate = () => {
       const elapsed = (Date.now() - start) / 1000;
-      setBreathPhase(Math.sin(elapsed * 0.5) * 0.5 + 0.5); // 0 to 1
+      setBreathPhase(Math.sin(elapsed * 0.5) * 0.5 + 0.5);
       breathFrame.current = requestAnimationFrame(animate);
     };
     breathFrame.current = requestAnimationFrame(animate);
@@ -46,6 +58,7 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
       const elapsed = Date.now() - holdStartTime.current;
       const p = Math.min(elapsed / 10000, 1);
       setProgress(p);
+      setBreathLabel(getBreathPhaseLabel(elapsed));
       if (p < 1) {
         animationFrame.current = requestAnimationFrame(tick);
       } else {
@@ -86,13 +99,24 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
   }, []);
 
   const breathScale = 1 + breathPhase * 0.06;
-  const holdScale = isHolding ? 0.92 : breathScale;
+  const holdBreathScale = (() => {
+    if (!isHolding) return breathScale;
+    const elapsed = Date.now() - holdStartTime.current;
+    const cyclePos = elapsed % CYCLE_TOTAL;
+    if (cyclePos < BREATH_IN) {
+      return 0.88 + (cyclePos / BREATH_IN) * 0.12;
+    } else if (cyclePos < BREATH_IN + BREATH_HOLD) {
+      return 1.0;
+    } else {
+      const outProgress = (cyclePos - BREATH_IN - BREATH_HOLD) / BREATH_OUT;
+      return 1.0 - outProgress * 0.12;
+    }
+  })();
 
   const CIRCUMFERENCE = 2 * Math.PI * 118;
 
   return (
     <div className="relative flex items-center justify-center w-72 h-72 select-none touch-none">
-      {/* Progress ring */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
         viewBox="0 0 288 288"
@@ -125,25 +149,23 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
         />
       </svg>
 
-      {/* Outer glow ring */}
       <motion.div
         className={cn(
           "absolute w-56 h-56 rounded-full opacity-20",
           isSolarMode ? "bg-solar" : "bg-accent"
         )}
-        animate={{ scale: holdScale * 1.15 }}
+        animate={{ scale: holdBreathScale * 1.15 }}
         transition={{ type: "spring", stiffness: 120, damping: 20 }}
         style={{ filter: "blur(24px)" }}
       />
 
-      {/* The Stone */}
       <motion.div
         onPointerDown={startHold}
         onPointerUp={endHold}
         onPointerLeave={endHold}
         onPointerCancel={endHold}
         onPointerMove={trackMove}
-        animate={{ scale: holdScale, filter: isHolding ? "brightness(1.4)" : "brightness(1)" }}
+        animate={{ scale: holdBreathScale, filter: isHolding ? "brightness(1.4)" : "brightness(1)" }}
         transition={{ type: "spring", stiffness: 200, damping: 25 }}
         className={cn(
           "w-52 h-52 rounded-full cursor-pointer touch-none relative overflow-hidden",
@@ -153,23 +175,46 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
         )}
         style={{ userSelect: "none", WebkitUserSelect: "none" }}
       >
-        {/* Inner shimmer */}
         <div className="absolute inset-0 rounded-full bg-gradient-to-tl from-white/20 to-transparent" />
         <div className="absolute top-4 left-6 w-8 h-8 rounded-full bg-white/30 blur-lg" />
       </motion.div>
 
-      {/* Instruction */}
-      <motion.div
-        animate={{ opacity: isHolding ? 0 : 0.45 }}
-        transition={{ duration: 0.3 }}
-        className="absolute -bottom-14 text-center"
-      >
-        <p className="text-xs font-display tracking-[0.3em] text-white/50 uppercase">
-          {progress > 0.05 ? "Breathe..." : "Hold to check in"}
-        </p>
-      </motion.div>
+      <AnimatePresence mode="wait">
+        {isHolding ? (
+          <motion.div
+            key={breathLabel.phase}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 0.7, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.4 }}
+            className="absolute -bottom-16 text-center flex flex-col items-center gap-1"
+          >
+            <p className={cn(
+              "text-sm font-display tracking-[0.25em] uppercase",
+              breathLabel.phase === "in" ? "text-emerald-400/70" :
+              breathLabel.phase === "hold" ? "text-violet-300/70" :
+              "text-teal-400/70"
+            )}>
+              {breathLabel.label}
+            </p>
+            <p className="text-[9px] text-white/25 font-display tracking-widest">4-7-8</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="idle"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute -bottom-14 text-center"
+          >
+            <p className="text-xs font-display tracking-[0.3em] text-white/50 uppercase">
+              Hold to check in
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Progress % while holding */}
       {isHolding && (
         <motion.div
           initial={{ opacity: 0 }}

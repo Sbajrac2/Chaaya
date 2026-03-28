@@ -23,11 +23,12 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
 ### `artifacts/aasha` — Frontend (React + Vite)
 - Serves at `/` (root)
 - Key components:
-  - `src/components/Orb.tsx` — The glowing worry stone orb with breath animation + progress ring
+  - `src/components/Orb.tsx` — Glowing worry stone orb with 4-7-8 breathing method (Breathe in / Hold / Breathe out text)
   - `src/components/Onboarding.tsx` — First-launch onboarding (name input + tint color picker)
-  - `src/components/CheckinFlow.tsx` — 4-step check-in (showed up, nourished, left room, masking slider) + bio-validation card
+  - `src/components/CheckinFlow.tsx` — 4-step check-in, positive option first (YES left), skip buttons everywhere, hover tooltips with deeper "why" context
   - `src/components/InsightsView.tsx` — 5-tab insight panel (Chhaya/Garden/Asha/Pulse/Focus) with swipe + tap navigation
-  - `src/components/panels/ChhayaPanel.tsx` — Chhaya behavioral dashboard (SVG line charts for masking + wellbeing trends, bar chart for daily wellbeing, pattern detection signals, heatmap, calendar)
+  - `src/components/Footer.tsx` — Expandable footer: About Aasha, Crisis Resources (988, Crisis Text Line, NAMI, JED, Active Minds, SAMHSA), Research References (11 cited sources)
+  - `src/components/panels/ChhayaPanel.tsx` — Chhaya behavioral dashboard (SVG graphs, research-cited signals with "why" analysis, heatmap, calendar, footer)
   - `src/components/panels/GardenPanel.tsx` — Visual flower garden (SVG flowers per day, tap to see stats)
   - `src/components/panels/NotePanel.tsx` — Asha's AI note with patterns + Lighten the Load (5 email types: extension/absence/office-hours/accommodation/mental-health-day + regenerate)
   - `src/components/panels/PulsePanel.tsx` — Campus Pulse with explanation, interactive dots, share light
