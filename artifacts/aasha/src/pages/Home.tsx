@@ -4,6 +4,7 @@ import { Orb } from "@/components/Orb";
 import { CheckinFlow } from "@/components/CheckinFlow";
 import { InsightsView } from "@/components/InsightsView";
 import { Onboarding } from "@/components/Onboarding";
+import { ProfilePanel, ProfileButton } from "@/components/ProfilePanel";
 import { useSession } from "@/hooks/use-session";
 import { useProfile } from "@/hooks/use-profile";
 import { useWeatherSync } from "@/hooks/use-weather-sync";
@@ -13,11 +14,12 @@ type AppState = "home" | "checkin" | "insights";
 
 export default function Home() {
   const sessionId = useSession();
-  const { profile, isLoaded, saveProfile } = useProfile();
+  const { profile, isLoaded, saveProfile, clearProfile } = useProfile();
   const { weather, isSolarMode } = useWeatherSync();
   const [appState, setAppState] = useState<AppState>("home");
   const [holdData, setHoldData] = useState({ durationMs: 0, latencyMs: 0 });
   const [postCheckinNote, setPostCheckinNote] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const touchStartY = useRef(0);
 
@@ -38,6 +40,12 @@ export default function Home() {
   const handleSwipeAreaTouchEnd = (e: React.TouchEvent) => {
     const diff = touchStartY.current - e.changedTouches[0].clientY;
     if (diff > 40) setAppState("insights");
+  };
+
+  const handleSignOut = () => {
+    clearProfile();
+    setProfileOpen(false);
+    setAppState("home");
   };
 
   if (!sessionId || !isLoaded) return null;
@@ -79,6 +87,12 @@ export default function Home() {
           />
         ))}
       </div>
+
+      {appState === "home" && (
+        <div className="absolute top-5 right-5 z-20">
+          <ProfileButton profile={profile} onClick={() => setProfileOpen(true)} />
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {appState === "home" && (
@@ -147,6 +161,14 @@ export default function Home() {
           />
         )}
       </AnimatePresence>
+
+      <ProfilePanel
+        profile={profile}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onSave={saveProfile}
+        onSignOut={handleSignOut}
+      />
     </div>
   );
 }

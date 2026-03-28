@@ -34,7 +34,8 @@ Aasha is a minimalist mental health & cognitive support app for students and pro
   - `src/components/panels/PulsePanel.tsx` — Campus Pulse with explanation, interactive dots, share light
   - `src/components/panels/FocusFunnelPanel.tsx` — One-Task Mode with focus timer + quick-focus shortcuts + focus technique tips
   - `src/hooks/use-session.ts` — localStorage session UUID management
-  - `src/hooks/use-profile.ts` — localStorage user profile (name, tint hue)
+  - `src/components/ProfilePanel.tsx` — Slide-in profile panel (edit name/university/city, color picker, sign out with confirmation) + ProfileButton component
+  - `src/hooks/use-profile.ts` — localStorage user profile (name, tintHue, university, city)
   - `src/hooks/use-weather-sync.ts` — Geolocation + weather sync
 
 ### `artifacts/api-server` — Express API

@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 export interface UserProfile {
   name: string;
   tintHue: number;
+  university?: string;
+  city?: string;
 }
 
 const STORAGE_KEY = "aasha_profile";
@@ -10,10 +12,10 @@ const STORAGE_KEY = "aasha_profile";
 const TINT_OPTIONS = [
   { label: "Violet", hue: 270 },
   { label: "Teal", hue: 175 },
-  { label: "Blue", hue: 220 },
   { label: "Rose", hue: 340 },
-  { label: "Amber", hue: 35 },
+  { label: "Blue", hue: 220 },
   { label: "Emerald", hue: 150 },
+  { label: "Amber", hue: 35 },
 ];
 
 export { TINT_OPTIONS };
@@ -41,6 +43,7 @@ export function useProfile() {
 
   const clearProfile = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem("aasha_session_id");
     setProfile(null);
   }, []);
 
