@@ -41,7 +41,13 @@ export function PulsePanel() {
   };
 
   return (
-    <div className="flex flex-col items-center px-7 pt-3 pb-16 gap-6 overflow-y-auto">
+    <div className="flex flex-col items-center px-7 pt-3 pb-16 gap-5 overflow-y-auto">
+      <div className="w-full px-1">
+        <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20 mb-1">Campus Pulse</p>
+        <p className="text-xs text-white/35 leading-relaxed">
+          Anonymous, real-time snapshot of how everyone using Aasha is doing right now. No names, no data — just the feeling on campus tonight.
+        </p>
+      </div>
       <div className="relative w-40 h-40 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 120 120" style={{ transform: "rotate(-90deg)" }}>
           <circle cx="60" cy="60" r="54" fill="none" stroke="white" strokeWidth="2" opacity="0.05" />

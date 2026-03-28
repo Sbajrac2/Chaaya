@@ -226,11 +226,15 @@ router.post("/insights/email", async (req, res) => {
 The tone should be respectful, brief, and human — not groveling. Reference that the student is managing their wellbeing.
 Keep it to 3-4 short paragraphs.`;
 
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
     const userPrompt = `Write an extension request email with these details:
+- Date: ${today}
 - Professor: ${professorName ?? "Professor"}
 - Course: ${courseName ?? "my course"}
 - Assignment: ${assignmentName ?? "the upcoming assignment"}
 - Student: ${studentName ?? "a student"}
+- Include today's date (${today}) in the email
 
 Return ONLY a JSON object with these exact fields:
 {

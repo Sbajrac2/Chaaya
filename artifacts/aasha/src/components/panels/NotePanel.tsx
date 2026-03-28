@@ -7,6 +7,7 @@ import type { WeatherData } from "@workspace/api-client-react/src/generated/api.
 interface NotePanelProps {
   sessionId: string;
   weather: WeatherData | undefined;
+  userName?: string;
 }
 
 type View = "note" | "email-form" | "email-result" | "sanctuary";
@@ -18,7 +19,7 @@ const READING_SIGNALS = [
   { icon: Brain, label: "Behavioral shifts" },
 ];
 
-export function NotePanel({ sessionId, weather }: NotePanelProps) {
+export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
   const [view, setView] = useState<View>("note");
   const [profName, setProfName] = useState("");
   const [courseName, setCourseName] = useState("");
@@ -58,7 +59,12 @@ export function NotePanel({ sessionId, weather }: NotePanelProps) {
   const handleEmailGenerate = async () => {
     try {
       const res = await email.mutateAsync({
-        data: { professorName: profName, courseName, assignmentName: assignName },
+        data: {
+          professorName: profName,
+          courseName,
+          assignmentName: assignName,
+          studentName: userName || undefined,
+        },
       });
       if (res.mailtoLink) {
         window.open(res.mailtoLink, "_blank");

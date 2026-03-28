@@ -154,6 +154,45 @@ export function FocusFunnelPanel({ sessionId, weather }: FocusFunnelPanelProps) 
             </button>
 
             {error && <p className="text-xs text-red-400/60 mt-3 text-center">{error}</p>}
+
+            <div className="mt-6 space-y-3">
+              <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/20">Quick focus — no AI</p>
+              <div className="flex gap-2">
+                {TIMER_PRESETS.map((preset) => (
+                  <button
+                    key={preset.seconds}
+                    onClick={() => {
+                      const t = filledTasks[0] || "Focus session";
+                      setResult({ task: t, reason: "You chose to focus. That's already progress." });
+                      startTimer(preset.seconds);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-white/4 border border-white/8 text-xs text-white/40 font-display tracking-wider hover:bg-white/8 active:scale-95 transition-all"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 px-4 py-3 rounded-xl bg-white/3 border border-white/6">
+                <p className="text-[10px] font-display tracking-wider text-white/25 mb-2 uppercase">Focus techniques</p>
+                <div className="space-y-2">
+                  {[
+                    { name: "Body double", tip: "Work alongside someone (even on video call)" },
+                    { name: "2-minute rule", tip: "If it takes < 2 min, do it now" },
+                    { name: "Environment shift", tip: "Change rooms or put on different music" },
+                    { name: "Shrink the task", tip: "Make it embarrassingly small to start" },
+                  ].map((t) => (
+                    <div key={t.name} className="flex items-start gap-2">
+                      <div className="w-1 h-1 rounded-full bg-violet-500/30 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <span className="text-[10px] text-white/40 font-medium">{t.name}</span>
+                        <span className="text-[10px] text-white/20"> — {t.tip}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         ) : (
           <motion.div
