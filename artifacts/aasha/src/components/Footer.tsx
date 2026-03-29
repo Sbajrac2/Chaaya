@@ -74,7 +74,7 @@ export function Footer() {
       >
         <p className="text-xs text-white/40 leading-relaxed">
           Aasha (आशा, meaning "hope" in Hindi) is a behavioral awareness companion for students and professionals. 
-          It uses the 4-7-8 breathing method (Dr. Andrew Weil) and behavioral micro-tracking to help you notice 
+          It uses the 3-4-4 breathing method (adapted from pranayama) and behavioral micro-tracking to help you notice 
           patterns before they become crises. Aasha is not a diagnostic tool, therapy replacement, or clinical 
           intervention. It is a mirror — reflecting your own data back to you with context from peer-reviewed research.
         </p>

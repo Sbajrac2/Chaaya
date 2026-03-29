@@ -7,9 +7,9 @@ interface OrbProps {
   onCheckinTrigger: (durationMs: number, latencyMs: number) => void;
 }
 
-const BREATH_IN = 4000;
-const BREATH_HOLD = 7000;
-const BREATH_OUT = 8000;
+const BREATH_IN = 3000;
+const BREATH_HOLD = 4000;
+const BREATH_OUT = 4000;
 const CYCLE_TOTAL = BREATH_IN + BREATH_HOLD + BREATH_OUT;
 
 function getBreathPhaseLabel(elapsed: number): { label: string; phase: "in" | "hold" | "out" } {
@@ -68,6 +68,7 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
           movementLatencies.current.length > 0
             ? movementLatencies.current.reduce((a, b) => a + b, 0) / movementLatencies.current.length
             : 400;
+        console.log(`[Orb] 10s hold completed - Duration: ${elapsed}ms, Avg Latency: ${avgLatency.toFixed(2)}ms, Movement samples: ${movementLatencies.current.length}`);
         onCheckinTrigger(elapsed, avgLatency);
       }
     };
@@ -75,11 +76,25 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
   }, [onCheckinTrigger]);
 
   const endHold = useCallback(() => {
+    if (!holdActive.current) return;
     holdActive.current = false;
     setIsHolding(false);
     setProgress(0);
     cancelAnimationFrame(animationFrame.current);
-  }, []);
+    
+    const elapsed = Date.now() - holdStartTime.current;
+    // Still trigger callback even on early release (minimum 2 seconds)
+    if (elapsed >= 2000) {
+      const avgLatency =
+        movementLatencies.current.length > 0
+          ? movementLatencies.current.reduce((a, b) => a + b, 0) / movementLatencies.current.length
+          : 400;
+      console.log(`[Orb] Early release - Duration: ${elapsed}ms, Avg Latency: ${avgLatency.toFixed(2)}ms, Movement samples: ${movementLatencies.current.length}`);
+      onCheckinTrigger(elapsed, avgLatency);
+    } else {
+      console.log(`[Orb] Released too early (${elapsed}ms) - minimum 2000ms required`);
+    }
+  }, [onCheckinTrigger]);
 
   const trackMove = useCallback((e: React.PointerEvent) => {
     if (!holdActive.current) return;
@@ -87,6 +102,7 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
     const latency = now - lastMoveTime.current;
     if (latency > 0 && latency < 2000) {
       movementLatencies.current.push(latency);
+      console.log(`[Orb] Movement detected - Latency: ${latency}ms, Total samples: ${movementLatencies.current.length}`);
     }
     lastMoveTime.current = now;
   }, []);
@@ -197,7 +213,7 @@ export function Orb({ isSolarMode, onCheckinTrigger }: OrbProps) {
             )}>
               {breathLabel.label}
             </p>
-            <p className="text-[9px] text-white/25 font-display tracking-widest">4-7-8</p>
+            <p className="text-[9px] text-white/25 font-display tracking-widest">3-4-4</p>
           </motion.div>
         ) : (
           <motion.div

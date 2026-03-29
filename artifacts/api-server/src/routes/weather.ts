@@ -3,81 +3,106 @@ import { GetWeatherQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+// Uses Open-Meteo — completely free, no API key needed
+// Docs: https://open-meteo.com/en/docs
 router.get("/weather", async (req, res) => {
+  const hour = new Date().getHours();
+  const isDaytime = hour >= 7 && hour <= 18;
+
+  const fallback = {
+    temperature: 15,
+    description: "Partly cloudy",
+    uvIndex: isDaytime ? 3 : 0,
+    sunlightHours: isDaytime ? 6 : 2,
+    barometricPressure: 1013,
+    isLowSunlight: false,
+    city: "Your location",
+  };
+
   try {
     const query = GetWeatherQueryParams.parse(req.query);
     const { lat, lon } = query;
 
-    const apiKey = process.env.OPENWEATHER_API_KEY;
-    
-    if (!apiKey) {
-      const hour = new Date().getHours();
-      const isDaytime = hour >= 7 && hour <= 18;
-      return res.json({
-        temperature: 15,
-        description: "Partly cloudy",
-        uvIndex: isDaytime ? 3 : 0,
-        sunlightHours: isDaytime ? 6 : 2,
-        barometricPressure: 1013,
-        isLowSunlight: false,
-        city: "Your city",
-      });
+    if (!lat || !lon || lat === 0 || lon === 0) {
+      return res.json(fallback);
     }
 
-    const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`
-    );
+    // Fetch current weather + UV index from Open-Meteo (free, no key)
+    const weatherUrl =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,surface_pressure,weather_code,uv_index` +
+      `&daily=sunshine_duration,sunrise,sunset` +
+      `&timezone=auto&forecast_days=1`;
 
-    if (!response.ok) {
-      throw new Error("Weather API error");
-    }
+    const response = await fetch(weatherUrl, { signal: AbortSignal.timeout(6000) });
+
+    if (!response.ok) throw new Error(`Open-Meteo error: ${response.status}`);
 
     const data = await response.json() as {
-      main: { temp: number; pressure: number };
-      weather: Array<{ description: string }>;
-      name: string;
-      sys: { sunrise: number; sunset: number };
+      current: {
+        temperature_2m: number;
+        surface_pressure: number;
+        weather_code: number;
+        uv_index: number;
+      };
+      daily: {
+        sunshine_duration: number[];
+        sunrise: string[];
+        sunset: string[];
+      };
     };
 
-    const sunriseMs = data.sys.sunrise * 1000;
-    const sunsetMs = data.sys.sunset * 1000;
-    const sunlightHours = (sunsetMs - sunriseMs) / (1000 * 60 * 60);
+    // WMO weather codes → human description
+    const wmoCode = data.current.weather_code;
+    const description = wmoToDescription(wmoCode);
 
-    const uvResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/uvi?lat=${lat}&lon=${lon}&appid=${apiKey}`
-    ).catch(() => null);
-
-    let uvIndex = 0;
-    if (uvResponse?.ok) {
-      const uvData = await uvResponse.json() as { value: number };
-      uvIndex = uvData.value;
-    }
-
+    // Sunshine duration comes in seconds — convert to hours
+    const sunlightHours = Math.round((data.daily.sunshine_duration?.[0] ?? 0) / 3600 * 10) / 10;
     const isLowSunlight = sunlightHours < 4;
 
+    // Reverse geocode city name using nominatim (free)
+    let city = "Your location";
+    try {
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { "User-Agent": "Aasha-App/1.0" }, signal: AbortSignal.timeout(3000) }
+      );
+      if (geoRes.ok) {
+        const geo = await geoRes.json() as { address?: { city?: string; town?: string; village?: string; suburb?: string } };
+        city = geo.address?.city ?? geo.address?.town ?? geo.address?.village ?? geo.address?.suburb ?? "Your location";
+      }
+    } catch {
+      // city stays as fallback
+    }
+
     res.json({
-      temperature: Math.round(data.main.temp),
-      description: data.weather[0]?.description ?? "Clear",
-      uvIndex,
-      sunlightHours: Math.round(sunlightHours * 10) / 10,
-      barometricPressure: data.main.pressure,
+      temperature: Math.round(data.current.temperature_2m),
+      description,
+      uvIndex: Math.round(data.current.uv_index * 10) / 10,
+      sunlightHours,
+      barometricPressure: Math.round(data.current.surface_pressure),
       isLowSunlight,
-      city: data.name,
+      city,
     });
   } catch (err) {
-    req.log.error({ err }, "Failed to get weather");
-    const hour = new Date().getHours();
-    const isDaytime = hour >= 7 && hour <= 18;
-    res.json({
-      temperature: 15,
-      description: "Partly cloudy",
-      uvIndex: isDaytime ? 3 : 0,
-      sunlightHours: isDaytime ? 6 : 2,
-      barometricPressure: 1013,
-      isLowSunlight: false,
-      city: "Your city",
-    });
+    console.warn("[API] Weather fetch failed, using fallback:", err);
+    res.json(fallback);
   }
 });
+
+function wmoToDescription(code: number): string {
+  if (code === 0) return "Clear sky";
+  if (code <= 2) return "Partly cloudy";
+  if (code === 3) return "Overcast";
+  if (code <= 49) return "Foggy";
+  if (code <= 59) return "Drizzle";
+  if (code <= 69) return "Rainy";
+  if (code <= 79) return "Snow";
+  if (code <= 82) return "Rain showers";
+  if (code <= 84) return "Snow showers";
+  if (code <= 99) return "Thunderstorm";
+  return "Cloudy";
+}
 
 export default router;

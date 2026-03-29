@@ -7,6 +7,7 @@ import {
 import { useCreateCheckin, useGenerateBioValidation } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWeatherSync } from "@/hooks/use-weather-sync";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface CheckinFlowProps {
@@ -48,6 +49,7 @@ export function CheckinFlow({
   const createCheckin = useCreateCheckin();
   const bioValidation = useGenerateBioValidation();
   const { weather } = useWeatherSync();
+  const { toast } = useToast();
 
   const advance = useCallback((nextStep: Step) => {
     setHoveredOption(null);
@@ -94,11 +96,18 @@ export function CheckinFlow({
         });
         setBioCard(bio);
         setStep("bio");
-      } catch {
+      } catch (e) {
+        console.warn("[CheckinFlow] bio validation failed, skipping", e)
         setStep("done");
         setTimeout(() => onComplete(), 2500);
       }
-    } catch {
+    } catch (e) {
+      console.error("[CheckinFlow] Failed to save checkin:", e);
+      toast({
+        title: "Failed to save your check-in",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
       onComplete();
     }
   };

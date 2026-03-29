@@ -78,9 +78,11 @@ function generateDemoCheckins(): any[] {
 }
 
 function aggregateByDay(checkins: any[]): DayData[] {
+  if (!Array.isArray(checkins)) return [];
   const map = new Map<string, { attended: number; masking: number[]; wellbeing: number[]; lateNight: boolean; leftRoom: boolean; ateWell: boolean; count: number; sleepScores: number[] }>();
 
   checkins.forEach(c => {
+    if (!c || !c.createdAt) return;
     const d = new Date(c.createdAt);
     const key = d.toISOString().split("T")[0];
     const existing = map.get(key) || { attended: 0, masking: [], wellbeing: [], lateNight: false, leftRoom: true, ateWell: true, count: 0, sleepScores: [] };
@@ -352,7 +354,11 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
   const [useDemo, setUseDemo] = useState(false);
 
   const demoCheckins = useMemo(() => generateDemoCheckins(), []);
-  const realCheckins = useMemo(() => checkins ?? [], [checkins]);
+  const realCheckins = useMemo(() => {
+    if (Array.isArray(checkins)) return checkins;
+    if (checkins && Array.isArray((checkins as any)?.data)) return (checkins as any).data;
+    return [];
+  }, [checkins]);
   const all = useDemo ? demoCheckins : realCheckins;
   const dayData = useMemo(() => aggregateByDay(all), [all]);
   const weekData = useMemo(() => aggregateByWeek(dayData), [dayData]);
@@ -362,7 +368,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
       <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30">
         <Loader2 className="w-6 h-6 animate-spin" />
         <p className="text-[10px] font-display tracking-[0.3em] uppercase">Analyzing patterns...</p>
-      </div>
+        </div>
     );
   }
 
@@ -392,23 +398,25 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
     );
   }
 
-  const totalDays = new Set(all.map(c => new Date(c.createdAt).toISOString().split("T")[0])).size;
+  // rest of the code unchanged
+  const safeAll = Array.isArray(all) ? all : [];
+  const totalDays = new Set(safeAll.map(c => new Date(c.createdAt).toISOString().split("T")[0])).size;
   const { week: academicWeek, label: weekLabel } = getAcademicWeek();
 
-  const attendedCount = all.filter(c => c.attendedClass).length;
-  const attendanceRate = all.length > 0 ? Math.round((attendedCount / all.length) * 100) : 0;
-  const avgMasking = all.length > 0
-    ? (all.reduce((s, c) => s + c.maskingLevel, 0) / all.length).toFixed(1)
+  const attendedCount = safeAll.filter(c => c.attendedClass).length;
+  const attendanceRate = safeAll.length > 0 ? Math.round((attendedCount / safeAll.length) * 100) : 0;
+  const avgMasking = safeAll.length > 0
+    ? (safeAll.reduce((s, c) => s + c.maskingLevel, 0) / safeAll.length).toFixed(1)
     : "—";
 
-  const lateNightCount = all.filter(c => c.isLateNight).length;
-  const isolationCount = all.filter(c => (c as any).leftRoom === false).length;
-  const skippedMealsCount = all.filter(c => !c.ateWell).length;
-  const missedClassCount = all.filter(c => !c.attendedClass).length;
-  const avgMaskNum = all.length > 0 ? all.reduce((s, c) => s + c.maskingLevel, 0) / all.length : 0;
+  const lateNightCount = safeAll.filter(c => c.isLateNight).length;
+  const isolationCount = safeAll.filter(c => (c as any).leftRoom === false).length;
+  const skippedMealsCount = safeAll.filter(c => !c.ateWell).length;
+  const missedClassCount = safeAll.filter(c => !c.attendedClass).length;
+  const avgMaskNum = safeAll.length > 0 ? safeAll.reduce((s, c) => s + c.maskingLevel, 0) / safeAll.length : 0;
 
-  const recent7 = all.slice(0, 7);
-  const older7 = all.slice(7, 14);
+  const recent7 = safeAll.slice(0, 7);
+  const older7 = safeAll.slice(7, 14);
 
   const recentLateRate = recent7.length > 0 ? recent7.filter(c => c.isLateNight).length / recent7.length : 0;
 
@@ -428,7 +436,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
       id: "sleep",
       icon: <Moon size={18} className="text-indigo-400" />,
       title: "sleep shift",
-      description: `${lateNightCount} late-night check-ins detected. Could be homework overload, insomnia, stress-induced wakefulness, circadian rhythm disruption, or social patterns keeping you up. The Healthy Minds Study (2023) found that 60% of college students report insufficient sleep, with each lost hour reducing next-day cognitive performance by 25% (Lund et al., Sleep, 2010). Your body is running on reduced capacity — and that's not a character flaw, it's physiology.`,
+      description: `${lateNightCount} late-night check-ins detected. Could be homework overload, insomnia, stress-induced wakefulness, partial circadian rhythm disruption, or social patterns keeping you up. The Healthy Minds Study (2023) found that 60% of college students report insufficient sleep, with each lost hour reducing next-day cognitive performance by 25% (Lund et al., Sleep, 2010). Your body is running on reduced capacity — and that's not a character flaw, it's physiology.`,
       severity: recentLateRate > 0.5 ? "alert" : "warning",
     });
   }
@@ -685,6 +693,7 @@ interface CalendarDay {
 }
 
 function buildCalendar(checkins: any[]): CalendarDay[] {
+  if (!Array.isArray(checkins)) return [];
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
@@ -692,6 +701,7 @@ function buildCalendar(checkins: any[]): CalendarDay[] {
 
   const checkinMap = new Map<string, { signalCount: number; attended: boolean }>();
   checkins.forEach(c => {
+    if (!c || !c.createdAt) return;
     const key = new Date(c.createdAt).toISOString().split("T")[0];
     const existing = checkinMap.get(key);
     const signals = (!c.attendedClass ? 1 : 0) + (!c.ateWell ? 1 : 0) +

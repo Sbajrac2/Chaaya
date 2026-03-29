@@ -24,10 +24,10 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
   );
 
   const scores = useMemo(() => {
-    if (!checkins || checkins.length === 0) return [];
+    const safeCheckins = Array.isArray(checkins) ? checkins : [];
+    if (safeCheckins.length === 0) return [];
 
-    const all = checkins;
-    const total = all.length;
+    const total = safeCheckins.length;
 
     // Calculate scores for each area (0-100)
     const areas: AreaScore[] = [
@@ -35,7 +35,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "attendance",
         label: "Attendance",
         emoji: "📚",
-        score: Math.round((all.filter(c => c.attendedClass).length / total) * 100),
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.attendedClass).length / total) * 100),
         description: "",
         status: "balanced",
       },
@@ -43,7 +43,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "nutrition",
         label: "Nutrition",
         emoji: "🥗",
-        score: Math.round((all.filter(c => c.ateWell).length / total) * 100),
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.ateWell).length / total) * 100),
         description: "",
         status: "balanced",
       },
@@ -51,7 +51,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "movement",
         label: "Movement",
         emoji: "🚶",
-        score: Math.round((all.filter(c => (c as any).leftRoom !== false).length / total) * 100),
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => (c as any).leftRoom !== false).length / total) * 100),
         description: "",
         status: "balanced",
       },
@@ -59,7 +59,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "sleep",
         label: "Sleep",
         emoji: "😴",
-        score: Math.round((all.filter(c => !c.isLateNight).length / total) * 100),
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => !c.isLateNight).length / total) * 100),
         description: "",
         status: "balanced",
       },
@@ -67,7 +67,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "authenticity",
         label: "Authenticity",
         emoji: "✨",
-        score: Math.round((1 - all.reduce((s, c) => s + (c.maskingLevel ?? 0), 0) / (total * 5)) * 100),
+        score: total === 0 ? 0 : Math.round((1 - safeCheckins.reduce((s, c) => s + (c.maskingLevel ?? 0), 0) / (total * 5)) * 100),
         description: "",
         status: "balanced",
       },
@@ -75,7 +75,7 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
         id: "sunlight",
         label: "Sunlight",
         emoji: "☀️",
-        score: Math.round((all.filter(c => c.hadSunlightExposure).length / total) * 100),
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.hadSunlightExposure).length / total) * 100),
         description: "",
         status: "balanced",
       },

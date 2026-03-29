@@ -1,18 +1,14 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
-if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-  throw new Error(
-    "AI_INTEGRATIONS_OPENAI_BASE_URL must be set. Did you forget to provision the OpenAI AI integration?",
-  );
+// Allow graceful degradation when Anthropic is not configured
+let anthropic: Anthropic | null = null;
+
+const apiKey = process.env.ANTHROPIC_API_KEY;
+if (apiKey) {
+  anthropic = new Anthropic({ apiKey });
+  console.log("[Integrations] ✅ Anthropic Claude configured");
+} else {
+  console.warn("[Integrations] ANTHROPIC_API_KEY not set - AI features will use built-in fallback responses");
 }
 
-if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-  throw new Error(
-    "AI_INTEGRATIONS_OPENAI_API_KEY must be set. Did you forget to provision the OpenAI AI integration?",
-  );
-}
-
-export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+export { anthropic };

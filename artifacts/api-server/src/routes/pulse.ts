@@ -37,6 +37,7 @@ router.get("/pulse", async (req, res) => {
       message = `${percentageDarkStretch}% of students are feeling the pressure today. Community energy is shifting.`;
     }
 
+    console.log(`[API] 📻 Campus Pulse - ${percentageDarkStretch}% in dark stretch, ${totalUsers} users`);
     res.json({
       totalUsers,
       inDarkStretch,
@@ -45,7 +46,7 @@ router.get("/pulse", async (req, res) => {
       message,
     });
   } catch (err) {
-    req.log.error({ err }, "Failed to get community pulse");
+    console.error("[API] ❌ Failed to get community pulse:", err);
     res.json({
       totalUsers: 47,
       inDarkStretch: 28,

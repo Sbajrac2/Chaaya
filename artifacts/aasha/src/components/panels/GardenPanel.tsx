@@ -109,7 +109,7 @@ function FlowerSVG({ data, size, onClick, isSelected }: {
 export function GardenPanel({ sessionId }: { sessionId: string }) {
   const { data: garden, isLoading } = useGetGarden(
     { sessionId },
-    { query: { enabled: !!sessionId, refetchOnMount: true } }
+    { query: { enabled: !!sessionId, refetchOnMount: true, retry: false, placeholderData: { recentCheckins: [], totalPetals: 0, currentStreak: 0 } } }
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 

@@ -2,23 +2,22 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { checkinsTable } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
-import { CreateCheckinBody, GetCheckinsQueryParams, GetGardenQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.post("/checkins", async (req, res) => {
   try {
-    const body = CreateCheckinBody.parse(req.body);
+    const body = req.body;
     const hour = new Date().getHours();
     const isLateNight = hour >= 22 || hour < 5;
 
     const [checkin] = await db.insert(checkinsTable).values({
       sessionId: body.sessionId,
-      attendedClass: body.attendedClass,
-      ateWell: body.ateWell,
-      maskingLevel: body.maskingLevel,
-      holdDurationMs: body.holdDurationMs,
-      interactionLatencyMs: body.interactionLatencyMs,
+      attendedClass: body.attendedClass ?? false,
+      ateWell: body.ateWell ?? false,
+      maskingLevel: body.maskingLevel ?? 3,
+      holdDurationMs: body.holdDurationMs ?? 0,
+      interactionLatencyMs: body.interactionLatencyMs ?? 400,
       isLateNight,
       lat: body.lat ?? null,
       lon: body.lon ?? null,
@@ -31,48 +30,53 @@ router.post("/checkins", async (req, res) => {
       completedTask: body.completedTask ?? null,
     }).returning();
 
+    console.log(`[API] ✅ Check-in saved to database for session ${body.sessionId}`);
+    console.log(`[API]   Duration: ${checkin.holdDurationMs}ms, Latency: ${checkin.interactionLatencyMs}ms`);
     res.status(201).json(checkin);
   } catch (err) {
-    req.log.error({ err }, "Failed to create check-in");
-    res.status(400).json({ error: "Invalid request" });
+    console.error("[API] ❌ Error saving check-in:", err);
+    res.status(400).json({ error: "Failed to save check-in" });
   }
 });
 
 router.get("/checkins", async (req, res) => {
   try {
-    const query = GetCheckinsQueryParams.parse(req.query);
+    const sessionId = req.query.sessionId as string;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+
     const checkins = await db
       .select()
       .from(checkinsTable)
-      .where(eq(checkinsTable.sessionId, query.sessionId))
+      .where(eq(checkinsTable.sessionId, sessionId))
       .orderBy(desc(checkinsTable.createdAt))
-      .limit(query.limit ?? 30);
+      .limit(limit);
 
+    console.log(`[API] 📊 Fetched ${checkins.length} check-ins from database for session ${sessionId}`);
     res.json(checkins);
   } catch (err) {
-    req.log.error({ err }, "Failed to get check-ins");
-    res.status(400).json({ error: "Invalid request" });
+    console.error("[API] ❌ Error fetching check-ins:", err);
+    res.status(400).json({ error: "Failed to fetch check-ins" });
   }
 });
 
 router.get("/checkins/garden", async (req, res) => {
   try {
-    const query = GetGardenQueryParams.parse(req.query);
-
+    const sessionId = req.query.sessionId as string;
     const checkins = await db
       .select()
       .from(checkinsTable)
-      .where(eq(checkinsTable.sessionId, query.sessionId))
+      .where(eq(checkinsTable.sessionId, sessionId))
       .orderBy(desc(checkinsTable.createdAt))
       .limit(100);
 
     const totalPetals = checkins.length;
-
     let currentStreak = 0;
+
     if (checkins.length > 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       let checkDate = new Date(today);
+
       for (const checkin of checkins) {
         const checkinDate = new Date(checkin.createdAt);
         checkinDate.setHours(0, 0, 0, 0);
@@ -85,14 +89,15 @@ router.get("/checkins/garden", async (req, res) => {
       }
     }
 
+    console.log(`[API] 🌻 Garden - ${totalPetals} petals, streak: ${currentStreak}`);
     res.json({
       totalPetals,
       recentCheckins: checkins.slice(0, 30),
       currentStreak,
     });
   } catch (err) {
-    req.log.error({ err }, "Failed to get garden data");
-    res.status(400).json({ error: "Invalid request" });
+    console.error("[API] ❌ Error fetching garden data:", err);
+    res.status(400).json({ error: "Failed to fetch garden data" });
   }
 });
 
