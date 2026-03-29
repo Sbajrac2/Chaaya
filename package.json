@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "dev": "pnpm --filter @workspace/aasha dev",
+    "dev": "concurrently --names \"API,FRONTEND\" --prefix-colors \"cyan,magenta\" \"pnpm --filter @workspace/api-server dev\" \"pnpm --filter @workspace/aasha dev\"",
+    "dev:api": "pnpm --filter @workspace/api-server dev",
     "dev:frontend": "pnpm --filter @workspace/aasha dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",

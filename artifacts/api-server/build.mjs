@@ -115,6 +115,20 @@ import __bannerUrl from 'node:url';
 globalThis.require = __bannerCrReq(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+
+// Load .env BEFORE any bundled module code runs (avoids ESM import-hoisting issue)
+try {
+  const __envFile = __bannerPath.resolve(globalThis.__dirname, '../../.env');
+  const __envLines = globalThis.require('fs').readFileSync(__envFile, 'utf8').split('\\n');
+  for (const __l of __envLines) {
+    const __i = __l.indexOf('=');
+    if (__i > 0 && !__l.trimStart().startsWith('#')) {
+      const __k = __l.slice(0, __i).trim();
+      const __v = __l.slice(__i + 1).trim().replace(/^["'](.*)["']$/s, '$1');
+      if (__k && process.env[__k] === undefined) process.env[__k] = __v;
+    }
+  }
+} catch {}
     `,
     },
   });
