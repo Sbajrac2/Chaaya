@@ -15,7 +15,10 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      path.resolve(artifactDir, "src/app.ts"),   // Vercel serverless uses this (no listen())
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
@@ -118,7 +121,7 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
 
 // Load .env BEFORE any bundled module code runs (avoids ESM import-hoisting issue)
 try {
-  const __envFile = __bannerPath.resolve(globalThis.__dirname, '../../.env');
+  const __envFile = __bannerPath.resolve(globalThis.__dirname, '../../../.env');
   const __envLines = globalThis.require('fs').readFileSync(__envFile, 'utf8').split('\\n');
   for (const __l of __envLines) {
     const __i = __l.indexOf('=');

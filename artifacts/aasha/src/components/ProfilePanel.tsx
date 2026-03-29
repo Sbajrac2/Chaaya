@@ -14,7 +14,8 @@ interface ProfilePanelProps {
 export function ProfilePanel({ profile, open, onClose, onSave, onSignOut }: ProfilePanelProps) {
   const [name, setName] = useState(profile.name);
   const [university, setUniversity] = useState(profile.university || "");
-  const [city, setCity] = useState(profile.city || "");
+const [city, setCity] = useState(profile.city || "");
+  const [state, setState] = useState(profile.state || "");
   const [selectedHue, setSelectedHue] = useState(profile.tintHue);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
 
@@ -25,6 +26,7 @@ export function ProfilePanel({ profile, open, onClose, onSave, onSignOut }: Prof
       tintHue: selectedHue,
       university: university.trim() || undefined,
       city: city.trim() || undefined,
+      state: state.trim() || undefined,
     });
     onClose();
   };
@@ -109,6 +111,17 @@ export function ProfilePanel({ profile, open, onClose, onSave, onSignOut }: Prof
                     onChange={e => setCity(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
                     placeholder="e.g. San Francisco"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-display tracking-widest uppercase text-white/20">State</label>
+                  <input
+                    type="text"
+                    value={state}
+                    onChange={e => setState(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+                    placeholder="e.g. CA"
                   />
                 </div>
               </div>

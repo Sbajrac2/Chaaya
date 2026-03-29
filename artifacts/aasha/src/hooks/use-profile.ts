@@ -5,6 +5,7 @@ export interface UserProfile {
   tintHue: number;
   university?: string;
   city?: string;
+  state?: string;
 }
 
 const STORAGE_KEY = "aasha_profile";

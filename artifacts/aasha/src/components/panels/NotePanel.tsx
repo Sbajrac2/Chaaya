@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useGenerateInsight, useGenerateExtensionEmail, useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, MapPin, Loader2, ArrowLeft, Brain, Eye, Moon, Activity, RefreshCw, Clock, BookOpen, Heart, Shield } from "lucide-react";
-import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
+// import type { WeatherData } from "@workspace/api-client-react/generated/api.schemas";
 
 interface NotePanelProps {
   sessionId: string;
@@ -22,7 +22,17 @@ interface EmailOption {
   fields: { key: string; placeholder: string }[];
 }
 
-const EMAIL_OPTIONS: EmailOption[] = [
+    const EMAIL_OPTIONS: EmailOption[] = [
+  {
+    type: "health-center" as "extension",
+    label: "Health center",
+    sublabel: "Counseling or wellbeing support",
+    icon: <Heart size={18} className="text-emerald-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Health center name (optional)" },
+      { key: "courseName", placeholder: "Brief reason (optional)" },
+    ],
+  },
   {
     type: "extension",
     label: "Extension request",
@@ -74,6 +84,16 @@ const EMAIL_OPTIONS: EmailOption[] = [
     fields: [
       { key: "professorName", placeholder: "Professor name (optional)" },
       { key: "courseName", placeholder: "Course name (optional)" },
+],
+  },
+  {
+    type: "mental-health-day",
+    label: "Mental health day",
+    sublabel: "A brief, honest note — no over-explaining",
+    icon: <Heart size={18} className="text-rose-400" />,
+    fields: [
+      { key: "professorName", placeholder: "Professor name (optional)" },
+      { key: "courseName", placeholder: "Course name (optional)" },
     ],
   },
 ];
@@ -93,7 +113,7 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
 
   const { data: checkins } = useGetCheckins(
     { sessionId, limit: 14 },
-    { query: { enabled: !!sessionId, refetchOnMount: true } }
+{ query: { enabled: !!sessionId, refetchOnMount: true, queryKey: ['checkins', sessionId] } }
   );
 
   const insight = useGenerateInsight();
@@ -217,7 +237,7 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
                 {insight.data?.patterns && insight.data.patterns.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-[9px] font-display tracking-[0.35em] uppercase text-white/20">
-                      What Asha noticed
+                      What Chaaya noticed
                     </p>
                     {insight.data.patterns.map((p: string, i: number) => (
                       <motion.div
@@ -241,7 +261,7 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
                   <ActionCard
                     icon={<Mail size={18} />}
                     label="Draft an email"
-                    sublabel="Choose from 5 types — Asha writes it"
+                    sublabel="Choose from 6 types — Chaaya writes it"
                     color="violet"
                     onClick={() => setView("email-picker")}
                   />
@@ -271,7 +291,7 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
             </button>
 
             <p className="text-sm text-white/60 leading-relaxed">
-              What kind of email do you need? Pick one and Asha will write it for you.
+              What kind of email do you need? Pick one and Chaaya will write it for you.
             </p>
 
             <div className="space-y-2">

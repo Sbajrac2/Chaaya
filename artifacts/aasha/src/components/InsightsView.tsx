@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Flower2, Radio, Target, Eye, BarChart3 } from "lucide-react";
+import { ChevronDown, Flower2, Radio, Target, Eye, BarChart3, MessageCircle } from "lucide-react";
 import { GardenPanel } from "./panels/GardenPanel";
 import { PulsePanel } from "./panels/PulsePanel";
 import { FocusFunnelPanel } from "./panels/FocusFunnelPanel";
 import { ReflectionPanel } from "./panels/ReflectionPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
-import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
+import { NotePanel } from "./panels/NotePanel";
+// import type { WeatherData } from "@workspace/api-client-react/generated/api.schemas";
 
 interface InsightsViewProps {
   sessionId: string;
@@ -18,6 +19,7 @@ interface InsightsViewProps {
 
 const TABS = [
   { id: "reflection", icon: Eye, label: "Reflection" },
+  { id: "chaaya", icon: MessageCircle, label: "Chaaya" },
   { id: "dashboard", icon: BarChart3, label: "Dashboard" },
   { id: "garden", icon: Flower2, label: "Garden" },
   { id: "pulse", icon: Radio, label: "Pulse" },
@@ -119,6 +121,11 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
           {activeTab === "focus" && (
             <Panel key="focus">
               <FocusFunnelPanel sessionId={sessionId} weather={weather} />
+            </Panel>
+          )}
+          {activeTab === "chaaya" && (
+            <Panel key="chaaya">
+              <NotePanel sessionId={sessionId} weather={weather} userName={userName} />
             </Panel>
           )}
         </AnimatePresence>
