@@ -19,13 +19,7 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname),
   server: {
     port: 5173,
-    host: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      }
-    }
+    host: true
   },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),

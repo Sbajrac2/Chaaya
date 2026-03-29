@@ -30,31 +30,21 @@ echo -e "${BLUE}2️⃣  Running database migrations...${NC}"
 cd lib/db
 pnpm push --force 2>/dev/null || echo "Migrations may have already run"
 
-# Start API server
-echo -e "${BLUE}3️⃣  Starting API Server${NC}"
-cd ../../artifacts/api-server
-pnpm dev &
-API_PID=$!
-
-# Wait a moment for API to start
-sleep 2
-
 # Start frontend
-echo -e "${BLUE}4️⃣  Starting Frontend${NC}"
-cd ../aasha
+echo -e "${BLUE}3️⃣  Starting Frontend${NC}"
+cd ../../artifacts/aasha
 pnpm dev &
 FRONTEND_PID=$!
 
 # Display info
 echo -e "\n${GREEN}✅ Setup complete!${NC}\n"
 echo -e "${GREEN}Frontend:  ${BLUE}http://localhost:5173${NC}"
-echo -e "${GREEN}API:       ${BLUE}http://localhost:3000${NC}"
 echo -e "${GREEN}Database:  ${BLUE}postgres://aasha@localhost:5432/aasha_db${NC}\n"
 
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}\n"
 
 # Cleanup on exit
-trap "kill $API_PID $FRONTEND_PID 2>/dev/null; docker-compose down" EXIT
+trap "kill $FRONTEND_PID 2>/dev/null; docker-compose down" EXIT
 
 # Wait for processes
 wait

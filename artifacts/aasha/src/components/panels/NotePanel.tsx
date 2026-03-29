@@ -100,12 +100,13 @@ export function NotePanel({ sessionId, weather, userName }: NotePanelProps) {
   const email = useGenerateExtensionEmail();
 
   useEffect(() => {
-    if (checkins !== undefined && !hasTriggered && !insight.data && !insight.isPending) {
+    const safeCheckins = Array.isArray(checkins) ? checkins : [];
+    if (safeCheckins.length > 0 && !hasTriggered && !insight.data && !insight.isPending) {
       setHasTriggered(true);
       insight.mutate({
         data: {
           sessionId,
-          recentCheckins: checkins,
+          recentCheckins: safeCheckins,
           weatherData: weather || {
             temperature: 20,
             description: "Unable to load weather",

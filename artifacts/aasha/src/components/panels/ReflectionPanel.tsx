@@ -355,12 +355,10 @@ export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
   const [useDemo, setUseDemo] = useState(false);
 
   const demoCheckins = useMemo(() => generateDemoCheckins(), []);
-  const realCheckins = useMemo(() => {
-    if (Array.isArray(checkins)) return checkins;
-    if (checkins && Array.isArray((checkins as any)?.data)) return (checkins as any).data;
-    return [];
-  }, [checkins]);
-  const all = useDemo ? demoCheckins : realCheckins;
+  const all = useMemo(() => {
+    const safeCheckins = Array.isArray(checkins) ? checkins : [];
+    return useDemo ? demoCheckins : safeCheckins;
+  }, [checkins, useDemo, demoCheckins]);
   const dayData = useMemo(() => aggregateByDay(all), [all]);
   const weekData = useMemo(() => aggregateByWeek(dayData), [dayData]);
 
@@ -373,7 +371,7 @@ export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
     );
   }
 
-  if (realCheckins.length === 0 && !useDemo) {
+  if (all.length === 0 && !useDemo) {
     return (
       <div className="flex flex-col h-full px-5 pt-3 pb-16 overflow-y-auto">
         <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
@@ -400,24 +398,23 @@ export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
   }
 
   // rest of the code unchanged
-  const safeAll = Array.isArray(all) ? all : [];
-  const totalDays = new Set(safeAll.map(c => new Date(c.createdAt).toISOString().split("T")[0])).size;
+  const totalDays = new Set(all.map(c => new Date(c.createdAt).toISOString().split("T")[0])).size;
   const { week: academicWeek, label: weekLabel } = getAcademicWeek();
 
-  const attendedCount = safeAll.filter(c => c.attendedClass).length;
-  const attendanceRate = safeAll.length > 0 ? Math.round((attendedCount / safeAll.length) * 100) : 0;
-  const avgMasking = safeAll.length > 0
-    ? (safeAll.reduce((s, c) => s + c.maskingLevel, 0) / safeAll.length).toFixed(1)
+  const attendedCount = all.filter(c => c.attendedClass).length;
+  const attendanceRate = all.length > 0 ? Math.round((attendedCount / all.length) * 100) : 0;
+  const avgMasking = all.length > 0
+    ? (all.reduce((s, c) => s + c.maskingLevel, 0) / all.length).toFixed(1)
     : "—";
 
-  const lateNightCount = safeAll.filter(c => c.isLateNight).length;
-  const isolationCount = safeAll.filter(c => (c as any).leftRoom === false).length;
-  const skippedMealsCount = safeAll.filter(c => !c.ateWell).length;
-  const missedClassCount = safeAll.filter(c => !c.attendedClass).length;
-  const avgMaskNum = safeAll.length > 0 ? safeAll.reduce((s, c) => s + c.maskingLevel, 0) / safeAll.length : 0;
+  const lateNightCount = all.filter(c => c.isLateNight).length;
+  const isolationCount = all.filter(c => (c as any).leftRoom === false).length;
+  const skippedMealsCount = all.filter(c => !c.ateWell).length;
+  const missedClassCount = all.filter(c => !c.attendedClass).length;
+  const avgMaskNum = all.length > 0 ? all.reduce((s, c) => s + c.maskingLevel, 0) / all.length : 0;
 
-  const recent7 = safeAll.slice(0, 7);
-  const older7 = safeAll.slice(7, 14);
+  const recent7 = all.slice(0, 7);
+  const older7 = all.slice(7, 14);
 
   const recentLateRate = recent7.length > 0 ? recent7.filter(c => c.isLateNight).length / recent7.length : 0;
 
