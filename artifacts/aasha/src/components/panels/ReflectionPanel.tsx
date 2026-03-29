@@ -3,8 +3,9 @@ import { useGetCheckins } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, AlertTriangle, TrendingDown, Moon, Users, Utensils, Activity, FlaskConical } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { SignalChart } from "./SignalChart";
 
-interface ChhayaPanelProps {
+interface ReflectionPanelProps {
   sessionId: string;
   userName: string;
 }
@@ -344,7 +345,7 @@ function MiniLineChart({ data, color, maxY, label, unit }: { data: { x: number; 
   );
 }
 
-export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
+export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
   const { data: checkins, isLoading } = useGetCheckins(
     { sessionId, limit: 100 },
     { query: { enabled: !!sessionId, refetchOnMount: true } }
@@ -382,7 +383,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
           <div className="space-y-2 max-w-[260px]">
             <p className="text-base text-white/60 font-light">No check-ins yet</p>
             <p className="text-xs text-white/30 leading-relaxed">
-              Hold the orb for 10 seconds to do your first check-in. Chhaya will start tracking your patterns.
+              Hold the orb for 10 seconds to do your first check-in. Reflection will start tracking your patterns.
             </p>
           </div>
           <button
@@ -486,7 +487,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
       id: "steady",
       icon: <Activity size={18} className="text-emerald-400" />,
       title: "steady patterns",
-      description: "Your behavioral patterns are stable. No significant shifts detected. Research shows consistent self-monitoring alone improves outcomes (Harkin et al., 2016, Psychological Bulletin). Keep checking in — Chhaya watches so you don't have to.",
+      description: "Your behavioral patterns are stable. No significant shifts detected. Research shows consistent self-monitoring alone improves outcomes (Harkin et al., 2016, Psychological Bulletin). Keep checking in — Reflection watches so you don't have to.",
       severity: "notice",
     });
   }
@@ -500,7 +501,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20">
-            Chhaya · Your patterns
+            Reflection · Your patterns
           </p>
           <p className="text-xs text-white/35">
             {totalDays} day{totalDays !== 1 ? "s" : ""} tracked · Week {academicWeek} of semester
@@ -527,7 +528,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
           className="px-4 py-2.5 rounded-xl bg-violet-500/8 border border-violet-500/15"
         >
           <p className="text-[10px] text-violet-300/50 leading-relaxed">
-            Previewing with 21 sample check-ins so you can see what Chhaya looks like with data. Your real data will appear once you start checking in.
+            Previewing with 21 sample check-ins so you can see what Reflection looks like with data. Your real data will appear once you start checking in.
           </p>
         </motion.div>
       )}
@@ -550,6 +551,8 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
         <StatCard label="Late nights" value={`${lateNightCount}`} />
       </div>
 
+      <SignalChart signals={signals} dayData={dayData} />
+
       {dayData.length >= 2 && (
         <div className="space-y-3">
           <DualLineChart data={dayData} />
@@ -568,7 +571,7 @@ export function ChhayaPanel({ sessionId, userName }: ChhayaPanelProps) {
         <div className="space-y-2">
           <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20 flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-violet-500/50 animate-pulse" />
-            Chhaya has noticed
+            Reflection has noticed
           </p>
           {signals.map((signal) => (
             <motion.button

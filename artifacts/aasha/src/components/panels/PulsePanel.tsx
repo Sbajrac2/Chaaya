@@ -45,7 +45,7 @@ export function PulsePanel() {
       <div className="w-full px-1">
         <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20 mb-1">Campus Pulse</p>
         <p className="text-xs text-white/35 leading-relaxed">
-          Anonymous, real-time snapshot of how everyone using Aasha is doing right now. No names, no data — just the feeling on campus tonight.
+          Anonymous, real-time snapshot of how everyone using Chaaya is doing right now. No names, no data — just the feeling on campus tonight.
         </p>
       </div>
       <div className="relative w-40 h-40 flex items-center justify-center">

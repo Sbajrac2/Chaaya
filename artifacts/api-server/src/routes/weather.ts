@@ -66,7 +66,7 @@ router.get("/weather", async (req, res) => {
     try {
       const geoRes = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-        { headers: { "User-Agent": "Aasha-App/1.0" }, signal: AbortSignal.timeout(3000) }
+        { headers: { "User-Agent": "Chaaya-App/1.0" }, signal: AbortSignal.timeout(3000) }
       );
       if (geoRes.ok) {
         const geo = await geoRes.json() as { address?: { city?: string; town?: string; village?: string; suburb?: string } };

@@ -6,7 +6,7 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Aasha Development Setup${NC}\n"
+echo -e "${BLUE}🚀 Chaaya Development Setup${NC}\n"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then

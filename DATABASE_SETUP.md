@@ -1,4 +1,4 @@
-# 🗄️ Aasha Database Setup Guide
+# 🗄️ Chaaya Database Setup Guide
 
 ## Quick Start (3 steps)
 
@@ -63,10 +63,10 @@ docker-compose logs -f postgres
 | **Type** | PostgreSQL 16 Alpine |
 | **Host** | localhost |
 | **Port** | 5432 |
-| **User** | aasha |
-| **Password** | aasha_dev_password |
-| **Database** | aasha_db |
-| **Connection** | `postgresql://aasha:aasha_dev_password@localhost:5432/aasha_db` |
+| **User** | chaaya |
+| **Password** | chaaya_dev_password |
+| **Database** | chaaya_db |
+| **Connection** | `postgresql://chaaya:chaaya_dev_password@localhost:5432/chaaya_db` |
 
 ---
 
@@ -75,7 +75,7 @@ docker-compose logs -f postgres
 ### Error: "docker: command not found"
 Install Docker Desktop: https://www.docker.com/products/docker-desktop
 
-### Error: "database "aasha_db" does not exist"
+### Error: "database "chaaya_db" does not exist"
 Run migrations:
 ```bash
 cd lib/db && pnpm push
@@ -96,7 +96,7 @@ Make sure:
 
 ### Data not appearing after check-in
 1. Check Terminal 1 logs for `[API] ✅ Check-in saved`
-2. Verify DB connection: `psql postgresql://aasha:aasha_dev_password@localhost:5432/aasha_db`
+2. Verify DB connection: `psql postgresql://chaaya:chaaya_dev_password@localhost:5432/chaaya_db`
 3. Restart both API server and frontend
 
 ---
@@ -126,4 +126,4 @@ docker system prune -a
 - **Orb tracking** → captures duration & latency, saves to DB
 - **Garden panel** → reads from DB, displays flower petals
 - **Dashboard** → reads from DB, shows charts
-- **Insights/Chhaya** → analyzes DB data with warm messages
+- **Insights/Reflection** → analyzes DB data with warm messages

@@ -110,7 +110,7 @@ export default function Home() {
               transition={{ delay: 0.5 }}
               className="text-xs font-display tracking-[0.4em] text-white/40 uppercase"
             >
-              Aasha · आशा
+              Chaaya · छाया
             </motion.div>
 
             <div className="flex-1 flex items-center justify-center w-full">

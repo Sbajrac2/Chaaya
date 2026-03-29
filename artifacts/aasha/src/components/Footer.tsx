@@ -68,14 +68,14 @@ export function Footer() {
       <FooterSection
         id="about"
         icon={<Heart size={14} />}
-        title="About Aasha"
+        title="About Chaaya"
         expanded={expandedSection === "about"}
         onToggle={() => toggle("about")}
       >
         <p className="text-xs text-white/40 leading-relaxed">
-          Aasha (आशा, meaning "hope" in Hindi) is a behavioral awareness companion for students and professionals. 
+          Chaaya (छाया, meaning "shadow" in Hindi) is a behavioral awareness companion for students and professionals. 
           It uses the 3-4-4 breathing method (adapted from pranayama) and behavioral micro-tracking to help you notice 
-          patterns before they become crises. Aasha is not a diagnostic tool, therapy replacement, or clinical 
+          patterns before they become crises. Chaaya is not a diagnostic tool, therapy replacement, or clinical 
           intervention. It is a mirror — reflecting your own data back to you with context from peer-reviewed research.
         </p>
         <p className="text-xs text-white/30 leading-relaxed mt-3">
@@ -122,7 +122,7 @@ export function Footer() {
         onToggle={() => toggle("references")}
       >
         <p className="text-[10px] text-white/25 mb-3 leading-relaxed">
-          All behavioral signals and insights in Aasha are grounded in peer-reviewed research. Below are the primary sources.
+          All behavioral signals and insights in Chaaya are grounded in peer-reviewed research. Below are the primary sources.
         </p>
         <div className="space-y-2.5">
           {REFERENCES.map((ref, i) => (
@@ -136,7 +136,7 @@ export function Footer() {
 
       <div className="pt-6 text-center space-y-2">
         <p className="text-[9px] text-white/15 font-display tracking-[0.3em] uppercase">
-          Aasha · आशा · Hope
+          Chaaya · छाया · Shadow
         </p>
         <p className="text-[9px] text-white/10 leading-relaxed max-w-[250px] mx-auto">
           Not a diagnosis. Not therapy. A behavioral mirror grounded in research.

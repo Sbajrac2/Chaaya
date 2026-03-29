@@ -1,4 +1,4 @@
-# How to Run Aasha Locally
+# How to Run Chaaya Locally
 
 No Replit. Full stack: React frontend + Express API + PostgreSQL in Docker.
 

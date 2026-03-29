@@ -1,11 +1,10 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Flower2, Sparkles, Radio, Target, Eye, BarChart3 } from "lucide-react";
+import { ChevronDown, Flower2, Radio, Target, Eye, BarChart3 } from "lucide-react";
 import { GardenPanel } from "./panels/GardenPanel";
-import { NotePanel } from "./panels/NotePanel";
 import { PulsePanel } from "./panels/PulsePanel";
 import { FocusFunnelPanel } from "./panels/FocusFunnelPanel";
-import { ChhayaPanel } from "./panels/ChhayaPanel";
+import { ReflectionPanel } from "./panels/ReflectionPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
 
@@ -18,10 +17,9 @@ interface InsightsViewProps {
 }
 
 const TABS = [
-  { id: "chhaya", icon: Eye, label: "Chhaya" },
+  { id: "reflection", icon: Eye, label: "Reflection" },
   { id: "dashboard", icon: BarChart3, label: "Dashboard" },
   { id: "garden", icon: Flower2, label: "Garden" },
-  { id: "note", icon: Sparkles, label: "Asha" },
   { id: "pulse", icon: Radio, label: "Pulse" },
   { id: "focus", icon: Target, label: "Focus" },
 ] as const;
@@ -29,7 +27,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export function InsightsView({ sessionId, weather, postCheckinNote, userName, onClose }: InsightsViewProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("chhaya");
+  const [activeTab, setActiveTab] = useState<TabId>("reflection");
 
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -98,9 +96,9 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
         onTouchEnd={handleTouchEnd}
       >
         <AnimatePresence mode="wait">
-          {activeTab === "chhaya" && (
-            <Panel key="chhaya">
-              <ChhayaPanel sessionId={sessionId} userName={userName} />
+          {activeTab === "reflection" && (
+            <Panel key="reflection">
+              <ReflectionPanel sessionId={sessionId} userName={userName} />
             </Panel>
           )}
           {activeTab === "dashboard" && (
@@ -111,11 +109,6 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
           {activeTab === "garden" && (
             <Panel key="garden">
               <GardenPanel sessionId={sessionId} />
-            </Panel>
-          )}
-          {activeTab === "note" && (
-            <Panel key="note">
-              <NotePanel sessionId={sessionId} weather={weather} userName={userName} />
             </Panel>
           )}
           {activeTab === "pulse" && (

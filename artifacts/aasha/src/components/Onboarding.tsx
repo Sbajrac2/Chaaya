@@ -63,7 +63,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
           <div className="text-center space-y-2">
             <h1 className="text-xl font-display font-light text-white/80 tracking-wider">
-              Welcome to Aasha
+              Welcome to Chaaya
             </h1>
             <p className="text-xs text-white/30 leading-relaxed max-w-[260px]">
               A behavioral awareness companion. Not a diagnosis — never a diagnosis.
