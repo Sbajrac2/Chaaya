@@ -60,28 +60,74 @@ export function SignalChart({ signals, dayData }: SignalChartProps) {
   return (
     <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2">
       <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/25">Your Habits at a Glance</p>
-      <div className="space-y-4 pt-2">
-        {data.map(item => (
-          <div key={item.name} className="space-y-2">
-            <div className="flex justify-between items-center text-xs text-white/50">
-              <span>{item.name}</span>
-              <span className="text-[10px]">{item.good} good days, {item.bad} tough days</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-2">
+        {data.map(item => {
+          const percentGood = totalDays === 0 ? 0 : (item.good / totalDays) * 100;
+          const percentBad = 100 - percentGood;
+          // Donut chart constants
+          const radius = 32;
+          const stroke = 8;
+          const circ = 2 * Math.PI * radius;
+          const goodLen = (percentGood / 100) * circ;
+          const badLen = circ - goodLen;
+          return (
+            <div key={item.name} className="flex flex-col items-center gap-2 bg-white/2 rounded-2xl p-4 shadow-sm">
+              <svg width={80} height={80} viewBox="0 0 80 80" className="mb-1">
+                <circle
+                  cx={40}
+                  cy={40}
+                  r={radius}
+                  fill="none"
+                  stroke="#f3f4f6"
+                  strokeWidth={stroke}
+                />
+                <circle
+                  cx={40}
+                  cy={40}
+                  r={radius}
+                  fill="none"
+                  stroke="#34d399"
+                  strokeWidth={stroke}
+                  strokeDasharray={`${goodLen} ${circ}`}
+                  strokeDashoffset={circ * 0.25}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(.4,2,.6,1)' }}
+                />
+                {percentBad > 0 && (
+                  <circle
+                    cx={40}
+                    cy={40}
+                    r={radius}
+                    fill="none"
+                    stroke="#fca5a5"
+                    strokeWidth={stroke}
+                    strokeDasharray={`${badLen} ${circ}`}
+                    strokeDashoffset={circ * 0.25 + goodLen}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(.4,2,.6,1)' }}
+                  />
+                )}
+                <text
+                  x="50%"
+                  y="50%"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize="15"
+                  fill="#fff"
+                  fontWeight="bold"
+                >
+                  {Math.round(percentGood)}%
+                </text>
+              </svg>
+              <div className="text-xs text-white/70 font-semibold mb-1">{item.name}</div>
+              <div className="flex gap-2 text-[10px] text-white/40 mb-1">
+                <span className="rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400">{item.good} Good</span>
+                <span className="rounded-full px-2 py-0.5 bg-rose-500/10 text-rose-400">{item.bad} Tough</span>
+              </div>
+              <p className="text-[10px] text-white/40 leading-relaxed text-center">{item.insight}</p>
             </div>
-            <div className="flex h-2 rounded-full overflow-hidden bg-white/10">
-              <div
-                className="bg-emerald-500/70"
-                style={{ width: `${(item.good / totalDays) * 100}%` }}
-                title={`${item.good} good days`}
-              />
-              <div
-                className="bg-red-500/70"
-                style={{ width: `${(item.bad / totalDays) * 100}%` }}
-                title={`${item.bad} tough days`}
-              />
-            </div>
-            <p className="text-[10px] text-white/40 leading-relaxed">{item.insight}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

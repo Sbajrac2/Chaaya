@@ -51,7 +51,11 @@ export default function Home() {
   if (!sessionId || !isLoaded) return null;
 
   if (!profile) {
-    return <Onboarding onComplete={saveProfile} />;
+    // After onboarding, redirect to landing page
+    return <Onboarding onComplete={(p) => {
+      saveProfile(p);
+      window.location.replace("/");
+    }} />;
   }
 
   const tintHue = profile.tintHue ?? 270;

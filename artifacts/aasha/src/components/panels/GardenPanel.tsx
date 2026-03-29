@@ -188,13 +188,3 @@ export function GardenPanel({ sessionId }: { sessionId: string }) {
     </div>
   );
 }
-
-
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
-      good ? "bg-emerald-500/8 border-emerald-500/15" : "bg-white/3 border-white/5"
-    }`}>
-      <div className={`w-2 h-2 rounded-full ${good ? "bg-emerald-400/60" : "bg-white/20"}`} />
-      <span className={`text-[10px] ${good ? "text-emerald-300/60" : "text-white/30"}`}>{label}</span>
-    </div>
-  );
-}

@@ -1,224 +1,162 @@
-// import { useMemo } from "react";
-// import { useGetCheckins } from "@workspace/api-client-react";
-// import { motion } from "framer-motion";
-// import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useGetCheckins } from "@workspace/api-client-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Loader2, TrendingUp, AlertCircle, BrainCircuit, 
+  ArrowUpRight, ArrowDownRight, ShieldAlert, 
+  Lightbulb, Target, Zap, Heart, Coffee, Moon, 
+  Sun, Users, BookOpen, CheckCircle2, ChevronDown,
+  ChevronUp, Sparkles
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-// interface DashboardPanelProps {
-//   sessionId: string;
-//   userName: string;
-// }
+interface DashboardPanelProps {
+  sessionId: string;
+  userName: string;
+}
 
-// interface AreaScore {
-//   id: string;
-//   label: string;
-//   emoji: string;
-//   score: number; // 0-100
-//   description: string;
-//   status: "strength" | "weakness" | "balanced";
-// }
+interface AreaScore {
+  id: string;
+  label: string;
+  emoji: string;
+  score: number; 
+  status: "strength" | "weakness" | "balanced";
+}
 
-// export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
-//   const { data: checkins, isLoading } = useGetCheckins(
-//     { sessionId, limit: 100 },
-//     { query: { enabled: !!sessionId, refetchOnMount: true } }
-//   );
 
-//   const scores = useMemo(() => {
-//     const safeCheckins = Array.isArray(checkins) ? checkins : [];
-//     if (safeCheckins.length === 0) return [];
+export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
+  const { data: checkins, isLoading } = useGetCheckins(
+    { sessionId, limit: 100 },
+    { enabled: !!sessionId, refetchOnMount: true } as any // workaround for query options typing
+  );
 
-//     const total = safeCheckins.length;
+  const scores = useMemo<AreaScore[]>(() => {
+    const safeCheckins = Array.isArray(checkins) ? checkins : [];
+    if (safeCheckins.length === 0) return [];
+    const total = safeCheckins.length;
+    const areas: AreaScore[] = [
+      {
+        id: "attendance",
+        label: "Attendance",
+        emoji: "📚",
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.attendedClass).length / total) * 100),
+        status: "balanced" as const,
+      },
+      {
+        id: "nutrition",
+        label: "Nutrition",
+        emoji: "🥗",
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.ateWell).length / total) * 100),
+        status: "balanced" as const,
+      },
+      {
+        id: "movement",
+        label: "Movement",
+        emoji: "🚶",
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => (c as any).leftRoom !== false).length / total) * 100),
+        status: "balanced" as const,
+      },
+      {
+        id: "sleep",
+        label: "Sleep",
+        emoji: "😴",
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => !c.isLateNight).length / total) * 100),
+        status: "balanced" as const,
+      },
+      {
+        id: "authenticity",
+        label: "Being Yourself",
+        emoji: "✨",
+        score: total === 0 ? 0 : Math.round((1 - safeCheckins.reduce((s, c) => s + (c.maskingLevel ?? 0), 0) / (total * 5)) * 100),
+        status: "balanced" as const,
+      },
+      {
+        id: "sunlight",
+        label: "Sunlight",
+        emoji: "☀️",
+        score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.hadSunlightExposure).length / total) * 100),
+        status: "balanced" as const,
+      },
+    ];
+    return areas.map(area => ({
+      ...area,
+      status: area.score >= 70 ? "strength" as const : area.score < 40 ? "weakness" as const : "balanced" as const,
+    }));
+  }, [checkins]);
 
-//     // Calculate scores for each area (0-100)
-//     const areas: AreaScore[] = [
-//       {
-//         id: "attendance",
-//         label: "Attendance",
-//         emoji: "📚",
-//         score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.attendedClass).length / total) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//       {
-//         id: "nutrition",
-//         label: "Nutrition",
-//         emoji: "🥗",
-//         score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.ateWell).length / total) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//       {
-//         id: "movement",
-//         label: "Movement",
-//         emoji: "🚶",
-//         score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => (c as any).leftRoom !== false).length / total) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//       {
-//         id: "sleep",
-//         label: "Sleep",
-//         emoji: "😴",
-//         score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => !c.isLateNight).length / total) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//       {
-//         id: "authenticity",
-//         label: "Authenticity",
-//         emoji: "✨",
-//         score: total === 0 ? 0 : Math.round((1 - safeCheckins.reduce((s, c) => s + (c.maskingLevel ?? 0), 0) / (total * 5)) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//       {
-//         id: "sunlight",
-//         label: "Sunlight",
-//         emoji: "☀️",
-//         score: total === 0 ? 0 : Math.round((safeCheckins.filter(c => c.hadSunlightExposure).length / total) * 100),
-//         description: "",
-//         status: "balanced",
-//       },
-//     ];
+  // Calculate burnoutRisk (example: average of all scores below 50)
+  const burnoutRisk = useMemo(() => {
+    if (!scores.length) return 0;
+    const lowScores = scores.filter(s => s.score < 50);
+    if (!lowScores.length) return 0;
+    return Math.round(
+      (lowScores.reduce((sum, s) => sum + (50 - s.score), 0) / (lowScores.length * 50)) * 100
+    );
+  }, [scores]);
 
-//     // Categorize as strength (70+), weakness (<40), or balanced
-//     return areas.map(area => ({
-//       ...area,
-//       status: area.score >= 70 ? "strength" : area.score < 40 ? "weakness" : "balanced",
-//     }));
-//   }, [checkins]);
+  // Find best and worst area
+  const reports = useMemo(() => {
+    if (!scores.length) return { best: { label: "-" }, worst: { label: "-" } };
+    const sorted = [...scores].sort((a, b) => b.score - a.score);
+    return {
+      best: sorted[0],
+      worst: sorted[sorted.length - 1],
+    };
+  }, [scores]);
 
-//   const strengths = scores.filter(s => s.status === "strength");
-//   const weaknesses = scores.filter(s => s.status === "weakness");
-//   const balanced = scores.filter(s => s.status === "balanced");
+  // Calculate fragility (example: days left before critical, based on lowest score)
+  const fragility = useMemo(() => {
+    if (!scores.length) return { days: 7, status: "STABLE" };
+    const minScore = Math.min(...scores.map(s => s.score));
+    const days = Math.max(1, Math.round((minScore / 100) * 7));
+    return {
+      days,
+      status: minScore < 30 ? "CRITICAL" : "STABLE",
+    };
+  }, [scores]);
 
-//   if (isLoading) {
-//     return (
-//       <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30">
-//         <Loader2 className="w-6 h-6 animate-spin" />
-//         <p className="text-[10px] font-display tracking-[0.3em] uppercase">Analyzing your patterns...</p>
-//       </div>
-//     );
-//   }
+  // Calculate polygonPoints for radar/graph (example: 4-point for 4 main areas)
+  const polygonPoints = useMemo(() => {
+    const r = 80;
+    const center = 150;
+    const points = [0, 1, 2, 3].map((i, idx) => {
+      const angle = (Math.PI / 2) + (idx * (Math.PI / 2));
+      const pct = (scores[i]?.score ?? 0) / 100;
+      const x = center + r * pct * Math.cos(angle);
+      const y = center + r * pct * Math.sin(angle);
+      return `${x},${y}`;
+    });
+    return points.join(" ");
+  }, [scores]);
 
-//   if (scores.length === 0) {
-//     return (
-//       <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30 px-6">
-//         <AlertCircle size={24} />
-//         <p className="text-sm text-white/40">No check-ins yet. Your dashboard will appear after your first check-in.</p>
-//       </div>
-//     );
-//   }
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30">
+        <Loader2 className="w-6 h-6 animate-spin" />
+        <p className="text-[10px] font-display tracking-[0.3em] uppercase">Analyzing your patterns...</p>
+      </div>
+    );
+  }
 
-//   return (
-//     <div className="flex flex-col h-full px-5 pt-3 pb-16 overflow-y-auto space-y-6">
-//       <div className="space-y-1">
-//         <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20">Dashboard</p>
-//         <p className="text-xs text-white/35">Your strengths and growth areas</p>
-//       </div>
+  if (scores.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-white/30 px-6">
+        <AlertCircle size={24} />
+        <p className="text-sm text-white/40">No check-ins yet. Your dashboard will appear after your first check-in.</p>
+      </div>
+    );
+  }
 
-//       {strengths.length > 0 && (
-//         <motion.div
-//           initial={{ opacity: 0, y: 10 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="space-y-3"
-//         >
-//           <div className="flex items-center gap-2">
-//             <TrendingUp size={14} className="text-emerald-400" />
-//             <p className="text-[10px] font-display tracking-[0.3em] uppercase text-emerald-400/70">You're doing great in</p>
-//           </div>
-//           <div className="space-y-2">
-//             {strengths.map((area, i) => (
-//               <AreaBar key={area.id} area={area} index={i} />
-//             ))}
-//           </div>
-//         </motion.div>
-//       )}
-
-//       {balanced.length > 0 && (
-//         <motion.div
-//           initial={{ opacity: 0, y: 10 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           transition={{ delay: 0.1 }}
-//           className="space-y-3"
-//         >
-//           <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/30">Also tracking</p>
-//           <div className="space-y-2">
-//             {balanced.map((area, i) => (
-//               <AreaBar key={area.id} area={area} index={i} />
-//             ))}
-//           </div>
-//         </motion.div>
-//       )}
-
-//       {weaknesses.length > 0 && (
-//         <motion.div
-//           initial={{ opacity: 0, y: 10 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           transition={{ delay: 0.2 }}
-//           className="space-y-3"
-//         >
-//           <div className="flex items-center gap-2">
-//             <AlertCircle size={14} className="text-amber-400" />
-//             <p className="text-[10px] font-display tracking-[0.3em] uppercase text-amber-400/70">Let's focus on</p>
-//           </div>
-//           <div className="space-y-2">
-//             {weaknesses.map((area, i) => (
-//               <AreaBar key={area.id} area={area} index={i} />
-//             ))}
-//           </div>
-//         </motion.div>
-//       )}
-
-//       {scores.length > 0 && (
-//         <motion.div
-//           initial={{ opacity: 0, y: 10 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           transition={{ delay: 0.3 }}
-//           className="mt-6 pt-6 border-t border-white/8 space-y-3"
-//         >
-//           <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/20">All areas overview</p>
-//           <div className="space-y-3">
-//             {scores.map((area) => (
-//               <div key={area.id} className="space-y-1">
-//                 <div className="flex items-center justify-between">
-//                   <span className="text-sm text-white/60 flex items-center gap-1.5">
-//                     <span>{area.emoji}</span>
-//                     {area.label}
-//                   </span>
-//                   <span className="text-xs font-display text-white/40">{area.score}%</span>
-//                 </div>
-//                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/8">
-//                   <motion.div
-//                     initial={{ width: 0 }}
-//                     animate={{ width: `${area.score}%` }}
-//                     transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-//                     className={`h-full rounded-full ${
-//                       area.status === "strength"
-//                         ? "bg-emerald-500/60"
-//                         : area.status === "weakness"
-//                         ? "bg-amber-500/50"
-//                         : "bg-white/20"
-//                     }`}
-//                   />
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </motion.div>
-//       )}
-
-//       <div className="pb-6 space-y-2 text-[9px] text-white/25 leading-relaxed">
-//         <p>
-//           📊 <span className="text-white/35">These scores are based on your recent check-ins.</span>
-//         </p>
-//         <p>
-//           💡 <span className="text-white/35">Higher scores mean you're doing well in that area. Lower scores show where support could help.</span>
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }
+  return (
+    <ActionableImprovements
+      scores={scores}
+      fragility={fragility}
+      burnoutRisk={burnoutRisk}
+      reports={reports}
+      polygonPoints={polygonPoints}
+    />
+  );
+}
 
 // function AreaBar({ area, index }: { area: AreaScore; index: number }) {
 //   return (
@@ -252,14 +190,6 @@
 //     </motion.div>
 //   );
 // }
-import { useMemo } from "react";
-import { useGetCheckins } from "@workspace/api-client-react";
-import { motion } from "framer-motion";
-import { 
-  Loader2, TrendingUp, AlertCircle, BrainCircuit, 
-  ArrowUpRight, ArrowDownRight, ShieldAlert 
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface DashboardPanelProps {
   sessionId: string;
@@ -274,65 +204,60 @@ interface AreaScore {
   status: "strength" | "weakness" | "balanced";
 }
 
-export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
-  const { data: checkins, isLoading } = useGetCheckins(
-    { sessionId, limit: 100 },
-    { 
-      query: { 
-        enabled: !!sessionId, 
-        refetchOnMount: true,
-        queryKey: ['checkins', sessionId, 100]
-      } 
-    }
-  );
 
-  const { scores, burnoutRisk, polygonPoints, reports, fragility } = useMemo(() => {
-    const safeCheckins = Array.isArray(checkins) ? checkins : [];
-    if (safeCheckins.length === 0) return { scores: [], burnoutRisk: 0, polygonPoints: "", reports: null, fragility: null };
+type ReportsType = { best: { label: string }; worst: { label: string } };
+interface ActionableImprovementsProps {
+  scores: AreaScore[];
+  fragility: { days: number; status: string };
+  burnoutRisk: number;
+  reports: ReportsType;
+  polygonPoints: string;
+}
 
-    const total = safeCheckins.length;
-    const recent = safeCheckins.slice(0, 7); 
-
-    const areas: AreaScore[] = [
-      { id: "acad", label: "ACADEMIC", emoji: "🧠", score: Math.round((safeCheckins.reduce((s, c) => s + ((c as any).energyLevel || (c.attendedClass ? 8 : 2)), 0) / (total * 10)) * 100), status: "balanced" },
-      { id: "nour", label: "NOURISH", emoji: "🍲", score: Math.round((safeCheckins.reduce((s, c) => s + ((c as any).mealsCount || (c.ateWell ? 2 : 0)), 0) / (total * 3)) * 100), status: "balanced" },
-      { id: "phys", label: "PHYSICAL", emoji: "👣", score: Math.round((safeCheckins.reduce((s, c) => s + ((c as any).activityLevel || (c.leftRoom ? 3 : 1)), 0) / (total * 5)) * 100), status: "balanced" },
-      { id: "auth", label: "AUTHENTIC", emoji: "🎭", score: Math.round((1 - safeCheckins.reduce((s, c) => s + (c.maskingLevel ?? 3), 0) / (total * 5)) * 100), status: "balanced" },
-    ];
-
-    const points = areas.map((a, i) => {
-      const angle = (i * 2 * Math.PI) / areas.length - Math.PI / 2;
-      const r = (a.score / 100) * 120;
-      return `${150 + r * Math.cos(angle)},${150 + r * Math.sin(angle)}`;
-    }).join(" ");
-
-    const avgMasking = recent.reduce((s, c) => s + (c.maskingLevel ?? 3), 0) / Math.max(recent.length, 1);
-    const avgEnergy = recent.reduce((s, c) => s + ((c as any).energyLevel || 5), 0) / Math.max(recent.length, 1);
-    const currentRisk = Math.min(Math.round((avgMasking / 5) * 60 + ((10 - avgEnergy) / 10) * 40), 100);
-
-    const riskTrendPerBadDay = 18; 
-    const daysToBreak = Math.max(1, Math.floor((88 - currentRisk) / riskTrendPerBadDay));
-
-    const sorted = [...areas].sort((a, b) => b.score - a.score);
-    
-    return {
-      scores: areas.map(a => ({ ...a, status: a.score >= 75 ? "strength" : a.score < 45 ? "weakness" : "balanced" })),
-      burnoutRisk: currentRisk,
-      polygonPoints: points,
-      reports: { best: sorted[0], worst: sorted[3] },
-      fragility: { 
-        days: daysToBreak, 
-        status: daysToBreak <= 2 ? "CRITICAL" : daysToBreak <= 4 ? "MODERATE" : "STABLE" 
-      }
-    };
-  }, [checkins]);
-
-  if (isLoading) return <LoadingState />;
-  if (!reports || !fragility) return <EmptyState />;
+function ActionableImprovements({ scores, fragility, burnoutRisk, reports, polygonPoints }: ActionableImprovementsProps) {
 
   return (
     <div className="flex flex-col h-full px-6 pt-6 pb-24 overflow-y-auto no-scrollbar space-y-12">
-      
+
+      {/* PREDICTIVE FORECAST SECTION */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl border border-violet-700/30 bg-violet-900/10 p-6 mb-2 shadow-lg"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="text-violet-400" size={18} />
+          <span className="text-xs font-bold uppercase tracking-widest text-violet-300">Forecast</span>
+        </div>
+        <h2 className="text-lg font-semibold text-white mb-2">Mental Health Forecast: {burnoutRisk >= 60 ? "High Risk" : burnoutRisk >= 30 ? "Moderate Risk" : "Stable"}</h2>
+        <div className="text-white/80 text-sm mb-2">
+          {burnoutRisk >= 60 && (
+            <>
+              <b>Warning:</b> Our system predicts a high risk of burnout in the next 48 hours.<br />
+              <span className="text-violet-300">Key signals: {fragility.days <= 2 ? "Low system tolerance, " : ""}{reports.worst.label} is critically low.</span>
+            </>
+          )}
+          {burnoutRisk >= 30 && burnoutRisk < 60 && (
+            <>
+              <b>Heads up:</b> You may experience increased stress or fatigue soon.<br />
+              <span className="text-violet-300">Focus on improving: {reports.worst.label}.</span>
+            </>
+          )}
+          {burnoutRisk < 30 && (
+            <>
+              <b>Looking good!</b> Your behavioral signals are stable. Keep up your routines.<br />
+              <span className="text-violet-300">Maintain strengths: {reports.best.label}.</span>
+            </>
+          )}
+        </div>
+        <div className="text-white/70 text-xs">
+          <b>Actionable Tip:</b> {burnoutRisk >= 60
+            ? `Take a restorative break today. Prioritize sleep and reach out to a friend or mentor.`
+            : burnoutRisk >= 30
+              ? `Try a 10-minute walk or mindfulness exercise. Small resets can prevent bigger crashes.`
+              : `Celebrate your consistency! Share your strategies with someone who might need them.`}
+        </div>
+      </motion.section>
+
       {/* 1. BURNOUT RISK HERO */}
       <motion.section 
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -433,6 +358,9 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
           <p className="text-xl font-light text-white">{reports.worst.label}</p>
         </div>
       </div>
+
+      {/* 5. ACTIONABLE IMPROVEMENTS */}
+      {/* (Handled by parent DashboardPanel now) */}
     </div>
   );
 }
@@ -446,12 +374,98 @@ function NodeLabel({ label, pos, icon }: { label: string; pos: string; icon: str
   );
 }
 
-function LoadingState() {
+
+function StrategyCard({ 
+  title, 
+  description, 
+  actions, 
+  color, 
+  expanded, 
+  onToggle 
+}: { 
+  title: string; 
+  description: string; 
+  actions: string[]; 
+  color: 'emerald' | 'blue' | 'violet' | 'pink'; 
+  expanded: boolean; 
+  onToggle: () => void; 
+}) {
+  const colorClasses = {
+    emerald: {
+      bg: 'bg-emerald-500/5',
+      border: 'border-emerald-500/20',
+      text: 'text-emerald-300',
+      icon: 'text-emerald-400'
+    },
+    blue: {
+      bg: 'bg-blue-500/5',
+      border: 'border-blue-500/20',
+      text: 'text-blue-300',
+      icon: 'text-blue-400'
+    },
+    violet: {
+      bg: 'bg-violet-500/5',
+      border: 'border-violet-500/20',
+      text: 'text-violet-300',
+      icon: 'text-violet-400'
+    },
+    pink: {
+      bg: 'bg-pink-500/5',
+      border: 'border-pink-500/20',
+      text: 'text-pink-300',
+      icon: 'text-pink-400'
+    }
+  };
+
+  const classes = colorClasses[color];
+
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-6">
-      <Loader2 className="animate-spin text-violet-500 w-8 h-8" />
-      <span className="text-[10px] uppercase tracking-[0.5em] text-white/20">Synthesizing Network...</span>
-    </div>
+    <motion.div 
+      layout
+      className={`rounded-[2rem] ${classes.bg} border ${classes.border} overflow-hidden`}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full p-5 text-left hover:bg-white/[0.01] transition-colors"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h5 className={`text-base font-light ${classes.text} mb-1`}>{title}</h5>
+            <p className="text-xs text-white/40 leading-relaxed">{description}</p>
+          </div>
+          {expanded ? 
+            <ChevronUp size={18} className="text-white/40 ml-3" /> : 
+            <ChevronDown size={18} className="text-white/40 ml-3" />
+          }
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-white/5"
+          >
+            <div className="p-5 space-y-3">
+              {actions.map((action, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-start gap-3"
+                >
+                  <CheckCircle2 size={16} className={`${classes.icon} mt-0.5 shrink-0`} />
+                  <span className="text-sm text-white/70 leading-relaxed">{action}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
