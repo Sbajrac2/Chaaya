@@ -1,6 +1,6 @@
 # Chaaya · छाया
 
-**Chaaya** (Hindi for *shadow*) is a mental health check-in app built for the hackathon theme of Mental Health. It gives users a calm, beautiful space to pause, reflect on how they're feeling, and track emotional patterns over time.
+**Chaaya** (Nepali for *shadow*) is a mental health check-in app built for the hackathon theme of Mental Health. It gives users a calm, beautiful space to pause, reflect on how they're feeling, and track emotional patterns over time.
 
 ## What It Does
 
