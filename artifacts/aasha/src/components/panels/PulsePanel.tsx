@@ -5,7 +5,7 @@ import { Loader2, Heart } from "lucide-react";
 
 export function PulsePanel() {
   const { data: pulse, isLoading } = useGetCommunityPulse({
-    query: { staleTime: 1000 * 60 * 5, refetchOnMount: true },
+    query: { staleTime: 1000 * 60 * 5, refetchOnMount: true, queryKey: ['communityPulse'] },
   });
   const [sentLight, setSentLight] = useState(false);
   const [lightCount, setLightCount] = useState(0);

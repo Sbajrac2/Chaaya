@@ -363,7 +363,7 @@ function MiniLineChart({ data, color, maxY, label, unit }: { data: { x: number; 
 export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
   const { data: checkins, isLoading } = useGetCheckins(
     { sessionId, limit: 100 },
-    { query: { enabled: !!sessionId, refetchOnMount: true } }
+    { query: { enabled: !!sessionId, refetchOnMount: true, queryKey: ['checkins', sessionId, 100] } }
   );
   const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);

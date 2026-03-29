@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Target, Loader2, X, ChevronRight, Play, Pause, RotateCcw, Check } from "lucide-react";
-import { useFocusFunnel } from "@workspace/api-client-react";
-import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
+import { useFocusFunnel, type WeatherData } from "@workspace/api-client-react";
 
 interface FocusFunnelPanelProps {
   sessionId: string;

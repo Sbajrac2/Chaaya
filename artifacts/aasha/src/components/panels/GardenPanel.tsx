@@ -1,50 +1,22 @@
-import { useState } from "react";
 import { useGetGarden } from "@workspace/api-client-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
-interface FlowerData {
-  date: string;
-  dayLabel: string;
-  attendedClass: boolean;
-  ateWell: boolean;
-  maskingLevel: number;
-  leftRoom: boolean | null;
-  isLateNight: boolean;
-  count: number;
-}
 
-const FLOWER_SHAPES = [
-  { petals: 5, name: "daisy" },
-  { petals: 6, name: "lily" },
-  { petals: 8, name: "lotus" },
-  { petals: 4, name: "clover" },
-];
 
-function FlowerSVG({ data, size, onClick, isSelected }: {
-  data: FlowerData; size: number;
-  onClick: () => void; isSelected: boolean;
-}) {
-  const score = (data.attendedClass ? 1 : 0) + (data.ateWell ? 1 : 0) +
-    (data.leftRoom ? 1 : 0) + (data.maskingLevel <= 2 ? 1 : 0);
-
+function FlowerSVG({ petals, size }: { petals: number; size: number }) {
+  const score = Math.min(petals, 5); // Max 5 petals per flower
   const hue = score >= 3 ? 160 + score * 20 : 270 + score * 15;
   const sat = 55 + score * 8;
   const light = 50 + score * 5;
-  const petalCount = FLOWER_SHAPES[score % FLOWER_SHAPES.length].petals;
+  const petalCount = Math.max(1, petals); // At least 1 petal
 
   const stemHeight = size * 0.5;
   const centerR = size * 0.12;
   const petalR = size * (0.18 + score * 0.03);
 
   return (
-    <motion.div
-      className="cursor-pointer relative"
-      whileHover={{ scale: 1.15 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      style={{ width: size, height: size + stemHeight }}
-    >
+    <div className="relative" style={{ width: size, height: size + stemHeight }}>
       <svg width={size} height={size + stemHeight} viewBox={`0 0 ${size} ${size + stemHeight}`}>
         <line
           x1={size / 2} y1={size * 0.7} x2={size / 2} y2={size + stemHeight - 4}
@@ -73,7 +45,6 @@ function FlowerSVG({ data, size, onClick, isSelected }: {
               rx={petalR * 0.55} ry={petalR * 0.3}
               fill={`hsla(${hue + i * 8}, ${sat}%, ${light}%, ${0.6 + score * 0.08})`}
               transform={`rotate(${angle} ${px} ${py})`}
-              filter={isSelected ? "url(#glow)" : undefined}
             />
           );
         })}
@@ -84,17 +55,6 @@ function FlowerSVG({ data, size, onClick, isSelected }: {
           fill={`hsla(${hue - 20}, 70%, 70%, 0.9)`}
         />
 
-        {isSelected && (
-          <circle
-            cx={size / 2} cy={size * 0.45}
-            r={petalR + 4}
-            fill="none"
-            stroke="hsla(270, 80%, 70%, 0.4)"
-            strokeWidth={1.5}
-            strokeDasharray="4 3"
-          />
-        )}
-
         <defs>
           <filter id="glow">
             <feGaussianBlur stdDeviation="2" result="blur" />
@@ -102,16 +62,15 @@ function FlowerSVG({ data, size, onClick, isSelected }: {
           </filter>
         </defs>
       </svg>
-    </motion.div>
+    </div>
   );
 }
 
 export function GardenPanel({ sessionId }: { sessionId: string }) {
   const { data: garden, isLoading } = useGetGarden(
     { sessionId },
-    { query: { enabled: !!sessionId, refetchOnMount: true, retry: false, placeholderData: { recentCheckins: [], totalPetals: 0, currentStreak: 0 } } }
+    { query: { enabled: !!sessionId, refetchOnMount: true, retry: false, placeholderData: { recentCheckins: [], totalPetals: 0, currentStreak: 0 }, queryKey: ['garden', sessionId] } }
   );
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -123,34 +82,19 @@ export function GardenPanel({ sessionId }: { sessionId: string }) {
   }
 
   const checkins = garden?.recentCheckins ?? [];
-
-  const byDay = new Map<string, FlowerData>();
-  checkins.forEach((c) => {
-    const d = new Date(c.createdAt);
-    const key = d.toISOString().split("T")[0];
-    const existing = byDay.get(key);
-    if (!existing) {
-      byDay.set(key, {
-        date: key,
-        dayLabel: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-        attendedClass: c.attendedClass,
-        ateWell: c.ateWell,
-        maskingLevel: c.maskingLevel,
-        leftRoom: (c as any).leftRoom ?? null,
-        isLateNight: c.isLateNight,
-        count: 1,
-      });
-    } else {
-      existing.count++;
-      if (c.attendedClass) existing.attendedClass = true;
-      if (c.ateWell) existing.ateWell = true;
-    }
-  });
-
-  const flowers = Array.from(byDay.values()).slice(0, 21);
-  const selected = selectedDate ? byDay.get(selectedDate) : null;
-  const totalPetals = garden?.totalPetals ?? 0;
+  const totalPetals = checkins.length; // Each checkin is a petal
+  const totalFlowers = Math.floor(totalPetals / 5); // 5 petals = 1 flower
+  const currentPetals = totalPetals % 5; // Petals in current flower
   const streak = garden?.currentStreak ?? 0;
+
+  // Achievements: each flower unlocks an achievement
+  const achievements = [
+    { id: 1, name: "First Bloom", description: "Your first flower! 🌸 Planted a seed in reforestation project.", unlocked: totalFlowers >= 1 },
+    { id: 2, name: "Garden Guardian", description: "Second flower! 🌿 Supported mental health hotline with donation.", unlocked: totalFlowers >= 2 },
+    { id: 3, name: "Flora Friend", description: "Third flower! 🌺 Contributed to crisis prevention fund.", unlocked: totalFlowers >= 3 },
+    { id: 4, name: "Bloom Master", description: "Fourth flower! 🌻 Helped plant urban green spaces.", unlocked: totalFlowers >= 4 },
+    { id: 5, name: "Eternal Garden", description: "Fifth flower! 🌹 Ongoing support for mental wellness programs.", unlocked: totalFlowers >= 5 },
+  ];
 
   return (
     <div className="flex flex-col h-full px-5 pt-3 pb-16 overflow-y-auto">
@@ -158,7 +102,7 @@ export function GardenPanel({ sessionId }: { sessionId: string }) {
         <div>
           <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/25">Your Garden</p>
           <p className="text-xs text-white/40 mt-0.5">
-            {totalPetals} petal{totalPetals !== 1 ? "s" : ""} · {streak} day streak
+            {totalPetals} petal{totalPetals !== 1 ? "s" : ""} · {totalFlowers} flower{totalFlowers !== 1 ? "s" : ""} · {streak} day streak
           </p>
         </div>
         <motion.div
@@ -170,95 +114,82 @@ export function GardenPanel({ sessionId }: { sessionId: string }) {
         </motion.div>
       </div>
 
-      {flowers.length === 0 ? (
+      {totalPetals === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
             <span className="text-3xl opacity-40">🌱</span>
           </div>
           <p className="text-xs text-white/30 text-center max-w-[200px] leading-relaxed">
-            Hold the stone to plant your first flower. Each day you check in, a new one grows.
+            Hold the stone to plant your first petal. Each check-in grows your garden.
           </p>
         </div>
       ) : (
         <>
-          <div className="relative bg-gradient-to-b from-transparent via-emerald-950/10 to-emerald-950/20 rounded-2xl border border-white/5 p-4 min-h-[280px]">
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-emerald-900/15 to-transparent rounded-b-2xl" />
-
-            <div className="flex flex-wrap gap-1 justify-center items-end">
-              {flowers.map((flower, i) => (
-                <motion.div
-                  key={flower.date}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04, duration: 0.4 }}
-                >
-                  <FlowerSVG
-                    data={flower}
-                    size={flowers.length > 14 ? 44 : flowers.length > 7 ? 52 : 64}
-                    onClick={() => setSelectedDate(selectedDate === flower.date ? null : flower.date)}
-                    isSelected={selectedDate === flower.date}
-                  />
-                </motion.div>
-              ))}
+          {/* Current Flower in Progress */}
+          <div className="bg-gradient-to-b from-transparent via-emerald-950/10 to-emerald-950/20 rounded-2xl border border-white/5 p-4 mb-4">
+            <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/25 mb-3">
+              Current Flower ({currentPetals}/5 petals)
+            </p>
+            <div className="flex justify-center">
+              <FlowerSVG petals={currentPetals} size={80} />
             </div>
           </div>
 
-          <AnimatePresence>
-            {selected && (
+          {/* Completed Flowers */}
+          {totalFlowers > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/25 mb-3">
+                Bloomed Flowers ({totalFlowers})
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {Array.from({ length: totalFlowers }).map((_, i) => (
+                  <FlowerSVG key={i} petals={5} size={50} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Achievements */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-display tracking-[0.3em] uppercase text-white/25">Achievements</p>
+            {achievements.map((achievement) => (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-3 overflow-hidden"
+                key={achievement.id}
+                initial={{ opacity: 0.5 }}
+                animate={{ opacity: achievement.unlocked ? 1 : 0.3 }}
+                className={`p-3 rounded-xl border ${
+                  achievement.unlocked
+                    ? "bg-emerald-500/10 border-emerald-500/20"
+                    : "bg-white/5 border-white/10"
+                }`}
               >
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-white/70 font-medium">{selected.dayLabel}</p>
-                    <p className="text-[10px] text-white/30">
-                      {selected.count} check-in{selected.count > 1 ? "s" : ""}
+                <div className="flex items-center gap-3">
+                  <div className={`text-lg ${achievement.unlocked ? "opacity-100" : "opacity-40"}`}>
+                    {achievement.unlocked ? "🏆" : "🔒"}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${
+                      achievement.unlocked ? "text-emerald-300" : "text-white/40"
+                    }`}>
+                      {achievement.name}
                     </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <StatChip label="Showed up" value={selected.attendedClass} />
-                    <StatChip label="Nourished" value={selected.ateWell} />
-                    <StatChip label="Left room" value={selected.leftRoom ?? undefined} />
-                    <StatChip label="Late night" value={selected.isLateNight} invert />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[10px] text-white/30">Masking</p>
-                    <div className="flex gap-1 flex-1">
-                      {[1, 2, 3, 4, 5].map((v) => (
-                        <div
-                          key={v}
-                          className={`h-1.5 flex-1 rounded-full ${
-                            v <= selected.maskingLevel
-                              ? "bg-violet-500/60"
-                              : "bg-white/10"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-white/40">{selected.maskingLevel}/5</p>
+                    <p className={`text-[10px] ${
+                      achievement.unlocked ? "text-emerald-200/60" : "text-white/30"
+                    }`}>
+                      {achievement.description}
+                    </p>
                   </div>
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
+            ))}
+          </div>
         </>
       )}
     </div>
   );
 }
 
-function StatChip({ label, value, invert }: { label: string; value?: boolean; invert?: boolean }) {
-  if (value === undefined) return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/3 border border-white/5">
-      <div className="w-2 h-2 rounded-full bg-white/15" />
-      <span className="text-[10px] text-white/25">{label}</span>
-    </div>
-  );
-  const good = invert ? !value : value;
-  return (
+
     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
       good ? "bg-emerald-500/8 border-emerald-500/15" : "bg-white/3 border-white/5"
     }`}>

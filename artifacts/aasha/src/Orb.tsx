@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { CheckinFlow } from "./components/CheckinFlow";
 import { useSession } from "@/hooks/use-session";
 import { useGeolocation } from "@/hooks/use-weather-sync";
@@ -11,7 +11,8 @@ export function Orb() {
   const [showCheckinFlow, setShowCheckinFlow] = useState(false);
   const [startTime, setStartTime] = useState(0);
   const sessionId = useSession();
-  const { lat, lon } = useGeolocation();
+  const coords = useGeolocation();
+  const { lat, lon } = coords || { lat: 0, lon: 0 };
 
   const startHold = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();

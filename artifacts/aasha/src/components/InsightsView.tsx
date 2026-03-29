@@ -3,12 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Flower2, Radio, Target, Eye, BarChart3, MessageCircle } from "lucide-react";
 import { GardenPanel } from "./panels/GardenPanel";
 import { PulsePanel } from "./panels/PulsePanel";
-import { FocusFunnelPanel } from "./panels/FocusFunnelPanel";
 import { ReflectionPanel } from "./panels/ReflectionPanel";
-import { GraphPanel } from "./panels/GraphPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import { NotePanel } from "./panels/NotePanel";
-// import type { WeatherData } from "@workspace/api-client-react/generated/api.schemas";
+import { type WeatherData } from "@workspace/api-client-react";
 
 interface InsightsViewProps {
   sessionId: string;
@@ -24,7 +22,6 @@ const TABS = [
   { id: "dashboard", icon: BarChart3, label: "Dashboard" },
   { id: "garden", icon: Flower2, label: "Garden" },
   { id: "pulse", icon: Radio, label: "Pulse" },
-  { id: "focus", icon: Target, label: "Focus" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -114,19 +111,9 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
               <GardenPanel sessionId={sessionId} />
             </Panel>
           )}
-          {activeTab === "graph" && (
-            <Panel key="graph">
-              <GraphPanel sessionId={sessionId} />
-            </Panel>
-          )}
           {activeTab === "pulse" && (
             <Panel key="pulse">
               <PulsePanel />
-            </Panel>
-          )}
-          {activeTab === "focus" && (
-            <Panel key="focus">
-              <FocusFunnelPanel sessionId={sessionId} weather={weather} />
             </Panel>
           )}
           {activeTab === "chaaya" && (

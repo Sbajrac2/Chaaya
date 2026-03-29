@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { LandingPage } from "@/pages/LandingPage";
+import { GlobalNavigation } from "@/components/GlobalNavigation";
 
 // Configure query client with default options suitable for a mobile-like experience
 const queryClient = new QueryClient({
@@ -18,11 +19,14 @@ const queryClient = new QueryClient({
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={LandingPage} />
-      <Route path="/app" component={Home} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <GlobalNavigation />
+      <Switch>
+        <Route path="/" component={LandingPage} />
+        <Route path="/app" component={Home} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@ import { motion, PanInfo } from "framer-motion";
 import { GardenPanel } from "./panels/GardenPanel";
 import { NotePanel } from "./panels/NotePanel";
 import { PulsePanel } from "./panels/PulsePanel";
-import type { WeatherData } from "@workspace/api-client-react/src/generated/api.schemas";
+import { type WeatherData } from "@workspace/api-client-react";
 
 interface SwipeableViewProps {
   sessionId: string;

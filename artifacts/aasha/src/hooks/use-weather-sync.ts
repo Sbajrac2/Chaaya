@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGetWeather } from "@workspace/api-client-react";
 
-export function useWeatherSync() {
+export function useGeolocation() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
@@ -22,9 +22,15 @@ export function useWeatherSync() {
     }
   }, []);
 
+  return coords;
+}
+
+export function useWeatherSync() {
+  const coords = useGeolocation();
+
   const weatherQuery = useGetWeather(
     coords ? { lat: coords.lat, lon: coords.lon } : { lat: 0, lon: 0 },
-    { query: { enabled: !!coords, staleTime: 1000 * 60 * 30 } } // 30 min cache
+    { query: { enabled: !!coords, staleTime: 1000 * 60 * 30, queryKey: ['weather', coords?.lat, coords?.lon] } } // 30 min cache
   );
 
   return {
