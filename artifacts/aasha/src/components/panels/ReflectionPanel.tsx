@@ -151,86 +151,101 @@ function aggregateByWeek(dayData: DayData[]): { label: string; attendance: numbe
   });
 }
 
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+
 function DualLineChart({ data }: { data: DayData[] }) {
   if (data.length < 2) return null;
-  const w = 300;
-  const h = 100;
-  const px = 30;
-  const py = 14;
-  const chartW = w - px * 2;
-  const chartH = h - py * 2;
 
-  const sleepPoints = data.map((d, i) => ({
-    x: px + (i / (data.length - 1)) * chartW,
-    y: py + chartH - (Math.min(d.sleepScore, 10) / 10) * chartH,
-    label: d.label,
-    value: d.sleepScore,
-  }));
-
-  const maskPoints = data.map((d, i) => ({
-    x: px + (i / (data.length - 1)) * chartW,
-    y: py + chartH - (d.masking / 5) * chartH,
-    label: d.label,
-    value: d.masking,
-  }));
-
-  const makePath = (pts: typeof sleepPoints) =>
-    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-
-  const makeArea = (pts: typeof sleepPoints) => {
-    const pathD = makePath(pts);
-    return `${pathD} L ${pts[pts.length - 1].x.toFixed(1)} ${h} L ${pts[0].x.toFixed(1)} ${h} Z`;
+const chartConfig: ChartConfig = {
+    sleep: { label: "Sleep (hours)", color: "#818cf8" },
+    masking: { label: "Masking (/5)", color: "#a78bfa" },
   };
 
   return (
-    <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[9px] font-display tracking-[0.3em] uppercase text-white/25">Sleep & masking — daily</p>
-        <div className="flex gap-3">
-          <span className="flex items-center gap-1 text-[8px] text-indigo-400/60"><span className="w-3 h-0.5 rounded bg-indigo-400/60 inline-block" /> Sleep</span>
-          <span className="flex items-center gap-1 text-[8px] text-violet-400/60"><span className="w-3 h-0.5 rounded bg-violet-400/60 inline-block" /> Masking</span>
-        </div>
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 100 }}>
-        <defs>
-          <linearGradient id="grad-sleep" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.02" />
-          </linearGradient>
-          <linearGradient id="grad-mask-dual" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        {[2, 4, 6, 8].map(v => (
-          <line key={v} x1={px} y1={py + chartH - (v / 10) * chartH} x2={w - px} y2={py + chartH - (v / 10) * chartH} stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
-        ))}
-        <text x={px - 4} y={py + 4} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">10h</text>
-        <text x={px - 4} y={py + chartH / 2 + 2} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">5h</text>
-        <text x={px - 4} y={py + chartH + 4} textAnchor="end" fontSize="6" fill="rgba(255,255,255,0.15)">0</text>
-
-        <path d={makeArea(sleepPoints)} fill="url(#grad-sleep)" />
-        <path d={makePath(sleepPoints)} fill="none" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
-
-        <path d={makeArea(maskPoints)} fill="url(#grad-mask-dual)" />
-        <path d={makePath(maskPoints)} fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" strokeDasharray="4 3" />
-
-        {sleepPoints.map((p, i) => (
-          <circle key={`s${i}`} cx={p.x} cy={p.y} r="2.5" fill="#818cf8" opacity="0.8">
-            <title>{`${p.label}: ${p.value.toFixed(1)}h sleep`}</title>
-          </circle>
-        ))}
-        {maskPoints.map((p, i) => (
-          <circle key={`m${i}`} cx={p.x} cy={p.y} r="2.5" fill="#a78bfa" opacity="0.8">
-            <title>{`${p.label}: ${p.value.toFixed(1)}/5 masking`}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className="flex justify-between text-[8px] text-white/20 px-1">
-        <span>{data[0].label}</span>
-        <span>{data[data.length - 1].label}</span>
-      </div>
-    </div>
+    <ChartContainer config={chartConfig} className="h-[120px] w-full">
+      <ResponsiveContainer>
+        <LineChart data={data} margin={{ left: -20, right: -10 }}>
+          <defs>
+            <linearGradient id="sleepFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-sleep)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="var(--color-sleep)" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="maskFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-masking)" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="var(--color-masking)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
+          <XAxis dataKey="label" axisLine={false} tickLine={false} tickMargin={8} fontSize={10} tickFormatter={(value) => value.slice(0,3)} />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tickMargin={8} 
+            tickCount={4}
+            domain={['dataMin - 0.5', 'dataMax + 0.5']}
+            fontSize={10}
+          />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsla(0,0%,100%,0.1)" />
+          <XAxis dataKey="label" axisLine={false} tickLine={false} tickMargin={8} tick={{fontSize: 10}} tickFormatter={(value: string) => value.slice(0,3)} />
+          <YAxis 
+            yAxisId="left"
+            orientation="left"
+            axisLine={false} 
+            tickLine={false} 
+            tickMargin={8} 
+            tickCount={4}
+            domain={['auto', 'auto']}
+            tick={{fontSize: 10}}
+          />
+          <YAxis 
+            yAxisId="right" 
+            orientation="right"
+            axisLine={false} 
+            tickLine={false} 
+            tickMargin={8} 
+            tickCount={3}
+            domain={[0, 'dataMax']}
+            tickFormatter={(value) => value.toFixed(1)}
+            tick={{fontSize: 10}}
+          />
+          <Line 
+            name="sleep" 
+            type="monotone" 
+            dataKey="sleepScore" 
+            yAxisId="left"
+            stroke="var(--color-sleep, #818cf8)" 
+            strokeWidth={2.5}
+            dot={{ fill: "var(--color-sleep, #818cf8)", strokeWidth: 2 }}
+            activeDot={{ r: 6, strokeWidth: 3 }}
+          />
+          <Line 
+            name="masking" 
+            type="monotone" 
+            dataKey="masking" 
+            yAxisId="right"
+            stroke="var(--color-masking, #a78bfa)" 
+            strokeWidth={2.5}
+            strokeDasharray="4 4"
+            dot={{ fill: "var(--color-masking, #a78bfa)", strokeWidth: 2 }}
+            activeDot={{ r: 6, strokeWidth: 3 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartContainer>
   );
 }
 
@@ -552,15 +567,7 @@ export function ReflectionPanel({ sessionId, userName }: ReflectionPanelProps) {
 
       {dayData.length >= 2 && (
         <div className="space-y-3">
-          <DualLineChart data={dayData} />
-          <WeeklyGroupedBarChart weeks={weekData} />
-          <MiniLineChart
-            data={wellbeingChartData}
-            color="#34d399"
-            maxY={5}
-            label="Wellbeing trend"
-            unit="/5"
-          />
+  <DualLineChart data={dayData} />
         </div>
       )}
 

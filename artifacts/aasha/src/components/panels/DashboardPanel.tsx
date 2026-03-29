@@ -189,18 +189,23 @@ export function DashboardPanel({ sessionId, userName }: DashboardPanelProps) {
                   <span className="text-xs font-display text-white/40">{area.score}%</span>
                 </div>
                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/8">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${area.score}%` }}
-                    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-                    className={`h-full rounded-full ${
-                      area.status === "strength"
-                        ? "bg-emerald-500/60"
-                        : area.status === "weakness"
-                        ? "bg-amber-500/50"
-                        : "bg-white/20"
-                    }`}
-                  />
+  <motion.div
+    initial={{ width: 0 }}
+    animate={{ width: `${area.score}%` }}
+    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+    className={`h-full rounded-full group relative overflow-visible ${
+      area.status === "strength"
+        ? "bg-emerald-500/60"
+        : area.status === "weakness"
+        ? "bg-amber-500/50"
+        : "bg-white/20"
+    }`}
+    title={`${area.label}: ${area.score}% good days (${Math.round(area.score)}% of ${checkins?.length || 0} check-ins)`}
+  >
+    <div className="absolute -left-16 top-1/2 -translate-y-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap pointer-events-none z-10">
+      ${area.score}% good days
+    </div>
+  </motion.div>
                 </div>
               </div>
             ))}
@@ -235,18 +240,23 @@ function AreaBar({ area, index }: { area: AreaScore; index: number }) {
           <span className="text-xs font-display text-white/40">{area.score}%</span>
         </div>
         <div className="w-full h-2.5 bg-white/4 rounded-full overflow-hidden border border-white/8">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${area.score}%` }}
-            transition={{ duration: 0.7, delay: 0.1 + index * 0.05, ease: "easeOut" }}
-            className={`h-full rounded-full shadow-lg ${
-              area.status === "strength"
-                ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-emerald-500/30"
-                : area.status === "weakness"
-                ? "bg-gradient-to-r from-amber-500 to-amber-400 shadow-amber-500/20"
-                : "bg-gradient-to-r from-white/20 to-white/10"
-            }`}
-          />
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${area.score}%` }}
+          transition={{ duration: 0.7, delay: 0.1 + index * 0.05, ease: "easeOut" }}
+          className="h-full rounded-full shadow-lg group relative overflow-visible"
+          style={{
+            background: area.status === "strength"
+              ? "linear-gradient(to right, hsl(var(--emerald-500)/0.6), hsl(var(--emerald-400)/0.6))"
+              : area.status === "weakness"
+              ? "linear-gradient(to right, hsl(var(--amber-500)/0.5), hsl(var(--amber-400)/0.5))"
+              : "linear-gradient(to right, hsl(0 0% 100%/0.2), hsl(0 0% 100%/0.1))"
+          }}
+        >
+          <div className="absolute inset-0 rounded-full bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center text-[10px] text-white font-medium whitespace-nowrap">
+            {area.score}%
+          </div>
+        </motion.div>
         </div>
       </div>
     </motion.div>

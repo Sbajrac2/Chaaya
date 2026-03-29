@@ -30,6 +30,13 @@ router.post("/checkins", async (req, res) => {
       completedTask: body.completedTask ?? null,
     }).returning();
 
+    // Add to Neo4j knowledge graph
+    try {
+      await saveCheckinToGraph(checkin);
+    } catch (neoErr) {
+      console.log('[Neo4j] Optional graph save failed:', neoErr);
+    }
+
     console.log(`[API] ✅ Check-in saved to database for session ${body.sessionId}`);
     console.log(`[API]   Duration: ${checkin.holdDurationMs}ms, Latency: ${checkin.interactionLatencyMs}ms`);
     res.status(201).json(checkin);

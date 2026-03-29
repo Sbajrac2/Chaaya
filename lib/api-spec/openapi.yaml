@@ -206,6 +206,50 @@ paths:
               schema:
                 $ref: "#/components/schemas/CommunityPulse"
 
+  /graph/{sessionId}:
+    get:
+      operationId: getGraph
+      tags: [graph]
+      summary: Get knowledge graph for session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Graph nodes and edges
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        label:
+                          type: string
+                        data:
+                          type: object
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        source:
+                          type: string
+                        target:
+                          type: string
+                        label:
+                          type: string
+
 components:
   schemas:
     HealthStatus:

@@ -1,16 +1,17 @@
-# Restore Chaaya Note Panel Feature
-## Completed: 4/5
+# Knowledge Graph + Graph Improvements TODO
 
-### 1. ✅ Update use-profile.ts - Add `state?: string` to UserProfile interface
-### 2. ✅ Update ProfilePanel.tsx - Add state input field, save to profile
-### 3. ✅ Update NotePanel.tsx - Replace 'Asha'→'Chaaya', add Health center email template
-### 4. ✅ Update InsightsView.tsx - Add 'chaaya' tab rendering NotePanel
-### 5. ✅ Test & verify - Run dev server, check profile state save, Chaaya tab features work without breaking others
+## Plan Breakdown (Approved)
+1. ✅ Dev servers fixed (Node 20/nvm)
+2. **Improve graph readability** (DashboardPanel, ReflectionPanel charts)
+3. **Create Neo4j workspace package** (lib/neo4j/)
+4. **Backend Neo4j integration** (routes/graph.ts, checkins.ts hooks)
+5. **Frontend GraphPanel** + hook
+6. **Real-world impact** (tree-planting integration)
+7. **Polish garden/UI persistence animations**
+8. **Testing + completion**
 
-**Notes:** 
-- Minimal changes only, preserve all existing code/logic
-- Ensure profile state persists/saves correctly
-- Health center email: Add as 6th option with fields like centerName, reason
-- Sanctuary: Minor personalization if city/state available (future)
-- After all steps: attempt_completion
+## Current Step: 2/8 - Graph Readability
+- Migrate SVG charts to Recharts (interactive tooltips/zoom)
+- Add hover states/legends to Dashboard bars
 
+**Progress: 7/8 complete** (API client updated for graph)

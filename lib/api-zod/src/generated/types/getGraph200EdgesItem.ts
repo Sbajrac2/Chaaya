@@ -6,8 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ExtensionEmailResponse {
-  subject: string;
-  body: string;
-  mailtoLink: string;
-}
+export type GetGraph200EdgesItem = {
+  id?: string;
+  source?: string;
+  target?: string;
+  label?: string;
+};

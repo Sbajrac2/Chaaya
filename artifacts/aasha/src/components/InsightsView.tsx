@@ -5,6 +5,7 @@ import { GardenPanel } from "./panels/GardenPanel";
 import { PulsePanel } from "./panels/PulsePanel";
 import { FocusFunnelPanel } from "./panels/FocusFunnelPanel";
 import { ReflectionPanel } from "./panels/ReflectionPanel";
+import { GraphPanel } from "./panels/GraphPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import { NotePanel } from "./panels/NotePanel";
 // import type { WeatherData } from "@workspace/api-client-react/generated/api.schemas";
@@ -111,6 +112,11 @@ export function InsightsView({ sessionId, weather, postCheckinNote, userName, on
           {activeTab === "garden" && (
             <Panel key="garden">
               <GardenPanel sessionId={sessionId} />
+            </Panel>
+          )}
+          {activeTab === "graph" && (
+            <Panel key="graph">
+              <GraphPanel sessionId={sessionId} />
             </Panel>
           )}
           {activeTab === "pulse" && (
